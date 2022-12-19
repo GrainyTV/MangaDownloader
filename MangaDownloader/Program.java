@@ -89,7 +89,7 @@ class Program
 			}
 			
 			++i;
-	    }
+	    	}
 	
 		try
 		{
@@ -116,32 +116,32 @@ class Program
 		for(File child : directoryListing)
 		{
 			child.delete();
-	    }
+	    	}
 	}
 
 	public static void SaveIMG(String input, String name, String extension) throws IOException, MalformedURLException
 	{
 		URL url = new URL(input);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
-        InputStream is = conn.getInputStream();
-        BufferedImage image = ImageIO.read(is);
-        BufferedImage alphaless_image = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
-    	alphaless_image.getGraphics().drawImage(image, 0, 0, null);
-        File f = new File("images");
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		conn.setRequestMethod("GET");
+		conn.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36");
+		InputStream is = conn.getInputStream();
+		BufferedImage image = ImageIO.read(is);
+		BufferedImage alphaless_image = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+		alphaless_image.getGraphics().drawImage(image, 0, 0, null);
+		File f = new File("images");
 
-        if(f.exists() && f.isDirectory())
-        {
-        	ImageIO.write(alphaless_image, extension.substring(1, extension.length()), new File(MessageFormat.format("images/{0}{1}", name, extension)));
-        }
-        else
-        {
-        	f.mkdir();
-        	ImageIO.write(alphaless_image, extension.substring(1, extension.length()), new File(MessageFormat.format("images/{0}{1}", name, extension)));
-        }
-        
-        is.close();
+		if(f.exists() && f.isDirectory())
+		{
+			ImageIO.write(alphaless_image, extension.substring(1, extension.length()), new File(MessageFormat.format("images/{0}{1}", name, extension)));
+		}
+		else
+		{
+			f.mkdir();
+			ImageIO.write(alphaless_image, extension.substring(1, extension.length()), new File(MessageFormat.format("images/{0}{1}", name, extension)));
+		}
+
+		is.close();
 	}
 
 	public static void Run(int first_chapter, int final_chapter, String name, String url, String image_container, String image_extension) throws IOException
