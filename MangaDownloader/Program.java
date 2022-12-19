@@ -20,7 +20,7 @@ class Program
 {
 	public static void main(String[] args) 
 	{
-		final int FIRST_CHAPTER = 107;
+		final int FIRST_CHAPTER = 1;
 		final int FINAL_CHAPTER = 181;
 		final String NAME = "The Promised Neverland";
 		final String LINK = "https://www44.promised-neverland.com/manga/the-promised-neverland-chapter-{0}";
