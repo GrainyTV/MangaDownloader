@@ -20,8 +20,8 @@ class Program
 {
 	public static void main(String[] args) 
 	{
-		final int FIRST_CHAPTER = 1;
-		final int FINAL_CHAPTER = 1;
+		final int FIRST_CHAPTER = 107;
+		final int FINAL_CHAPTER = 181;
 		final String NAME = "The Promised Neverland";
 		final String LINK = "https://www44.promised-neverland.com/manga/the-promised-neverland-chapter-{0}";
 		final String IMAGE_CONTAINER_DIV = "div[class=entry-content]";
@@ -146,7 +146,7 @@ class Program
 	{
 		for(int j = first_chapter - 1; j < final_chapter; ++j)
 		{
-			var document = Jsoup.connect(MessageFormat.format(url, j + 1)).userAgent("Chrome").get();
+			var document = Jsoup.connect(MessageFormat.format(url, j + 1)).timeout(60000).userAgent("Chrome").get();
 			Element section = document.select(image_container).first();
 			Elements images = section.select(MessageFormat.format("img[data-src$={0}]", image_extension));
 
