@@ -78,7 +78,7 @@ class _ProgressState extends State<Progress>
 
 		process.stdout.transform(utf8.decoder).forEach( (s) =>
 		{ 
-			setState( () { for(int i = 0; i < widget.countOccurences(s, '[-]'); ++i) { widget.percantage.Add(widget.increment); widget.percantage.Print(); } }) 
+			setState( () { for(int i = 0; i < widget.countOccurences(s, '[-]'); ++i) { widget.percantage.Add(widget.increment); } }) 
 		});
   	}
 
@@ -94,7 +94,11 @@ class _ProgressState extends State<Progress>
 			'${widget.link}'
 		], workingDirectory: '${Directory.current.path}/lib/java');
 
-		process.stdout.transform(utf8.decoder).forEach(print);
+		process.stderr.transform(utf8.decoder).forEach(print);
+		process.stdout.transform(utf8.decoder).forEach( (s) =>
+		{ 
+			setState( () { print(s); widget.percantage.Add(widget.increment); }) 
+		});
   	}
 
   	@override
@@ -104,6 +108,8 @@ class _ProgressState extends State<Progress>
 
   		if(widget.lastChapter == 'undefined')
   		{
+  			widget.increment = new Fraction(num: 1, den: 1);
+  			widget.percantage = new Fraction(num: 0, den: 1);
   			renderPDF();
   		}
   		else
@@ -127,22 +133,6 @@ class _ProgressState extends State<Progress>
                 	flex: 1,
                 	child: Container
 	                (
-	        			/*alignment: Alignment.centerRight,
-	            		margin: EdgeInsets.fromLTRB(3, 3, 6, 3),
-	            		child: Container
-	            		(
-	            			decoration: BoxDecoration
-		            		(
-		                		border: Border.all(color: Colors.black, width: 2.0),
-		                		borderRadius: BorderRadius.circular(50),
-		                	),
-		                	
-		            		child: InkWell
-		            		(
-		                		onTap: widget.close,
-		                		child: Icon(Icons.close)
-		                	)
-	            		)*/	
 	                )
                 ),
 

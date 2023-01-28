@@ -8,10 +8,37 @@ import 'which.dart';
 
 enum Phase { main, name, amount, howmany, link, which, progress }
 
+class ContainerContent extends StatelessWidget
+{
+	final Widget current;
+	final bool hidden;
+
+	ContainerContent({ required this.current, this.hidden = false });
+
+	@override
+	Widget build(BuildContext context)
+	{
+		return Visibility
+		(
+			visible: !hidden,
+			child: Container
+        	( 
+	            decoration: BoxDecoration
+	            (
+	                boxShadow: [ BoxShadow(blurRadius: 25, blurStyle: BlurStyle.outer) ],
+	                color: Color(0xefffffff)
+	            ),
+	            child: current
+        	)
+        );
+	}
+}
+
+
 class Panel extends StatefulWidget 
 {
 	final Function() close;
-	Phase phase = Phase.name;
+	Phase phase;
 
 	var name;
 	var amount;
@@ -88,7 +115,16 @@ class Panel extends StatefulWidget
       	return sb.toString();
    	}
 
-	Panel({ required this.close });
+   	void Reset()
+   	{
+   		name = null;
+   		amount = null;
+   		howmany = null;
+   		link = null;
+   		which = null;
+   	}
+
+	Panel({ required this.phase, required this.close });
 
 	@override
 	Panel_State createState() => Panel_State();
@@ -103,11 +139,11 @@ class Panel_State extends State<Panel>
 		{
 			case Phase.name:
 				widget.name = Name(close: widget.close, next: () { setState( () { widget.phase = Phase.amount; }); });
-				return widget.name;
+				return ContainerContent(current: widget.name);
 			
 			case Phase.amount:
 				widget.amount = Amount(close: widget.close, next: () { setState( () { widget.phase = Phase.howmany; }); });
-				return widget.amount;
+				return ContainerContent(current: widget.amount);
 			
 			case Phase.howmany:
 				if(widget.amount.GetChoice() == Choice.one)
@@ -125,38 +161,39 @@ class Panel_State extends State<Panel>
 							setState( () { widget.phase = Phase.which; });
 						} 
 					});
-					return widget.link;
+					return ContainerContent(current: widget.link);
 				}
 
 				widget.howmany = HowMany(close: widget.close, next: () { setState( () { widget.phase = Phase.link; }); });
-				return widget.howmany;
+				return ContainerContent(current: widget.howmany);
 
 			case Phase.link:
 				widget.link = Link(close: widget.close, next: () { setState( () { widget.phase = Phase.progress; }); });
-				return widget.link;
+				return ContainerContent(current: widget.link);
 
 			case Phase.which:
 				widget.which = Which(close: widget.close, next: () { setState( () { widget.phase = Phase.progress; }); });
-				return widget.which;
+				return ContainerContent(current: widget.which);
 
 			case Phase.progress:
-				return (widget.amount.GetChoice() == Choice.one) ? Progress
+				return (widget.amount.GetChoice() == Choice.one) ? ContainerContent(current: Progress
 				(
-					next: () { setState( () { widget.phase = Phase.main; }); },
-					firstChapter: widget.howmany,
+					next: () { setState( () {  widget.Reset(); widget.phase = Phase.main; }); },
+					firstChapter: (widget.howmany != null) ? widget.howmany : widget.which.GetChapterValue(),
 					title: widget.name.GetName(),
 					link: widget.link.GetLink()					
-				) : Progress
+				)) : ContainerContent(current: Progress
 				(
-					next: () { setState( () { widget.phase = Phase.main; }); },
+					next: () { setState( () { widget.Reset(); widget.phase = Phase.main; }); },
 					firstChapter: widget.howmany.GetChapterValue(),
 					lastChapter: widget.howmany.GetChapterValue(first: false),
 					title: widget.name.GetName(),
 					link: widget.link.GetLink()
-				);
+				));
 
+			case Phase.main:
 			default:
-				return Container();
+				return ContainerContent(current: Container(), hidden: true);
 		}
 	}
 }

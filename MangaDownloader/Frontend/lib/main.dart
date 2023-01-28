@@ -19,7 +19,7 @@ class HomeScreen_State extends State<HomeScreen>
 {
     int color = 0xff152238;
     String img = 'https://cdn.myanimelist.net/s/common/uploaded_files/1673116629-e92d34f58be3fc9d28dc6daf043897ca.jpeg';
-    bool inputpanelvisibility = false;
+    Phase phase = Phase.main;
 
     @override
     Widget build(BuildContext context)
@@ -57,18 +57,7 @@ class HomeScreen_State extends State<HomeScreen>
                                 children: <Widget>
                                 [
                                     Expanded(flex: 3, child: Container()),
-                                    Visibility(visible: inputpanelvisibility, child: Expanded(flex: 2, child: Container
-                                    ( 
-                                        decoration: BoxDecoration
-                                        (
-                                            boxShadow: [ BoxShadow(blurRadius: 25, blurStyle: BlurStyle.outer) ],
-                                            color: Color(0xefffffff)
-                                        ),
-                                        child: Panel
-                                        (
-                                            close: () { setState( () { inputpanelvisibility = false; }); }
-                                        )
-                                    ))),
+                                    Expanded(flex: 2, child: Panel(phase: phase, close: () { setState( () { phase = Phase.main; }); })),
                                     Expanded(flex: 3, child: Container())
                                 ]
                             )),
@@ -80,7 +69,7 @@ class HomeScreen_State extends State<HomeScreen>
 
             floatingActionButton: FloatingActionButton.extended
             (
-                onPressed: (!inputpanelvisibility) ? () { setState( () { if(!inputpanelvisibility){ inputpanelvisibility = true; } });} : null,
+                onPressed: (phase == Phase.main) ? () { setState( () { phase = Phase.name; }); } : () {},
                 label: Text('New', style: TextStyle(fontSize: 15, fontFamily: 'Tisa')),
                 icon: Icon(Icons.add),
                 backgroundColor: Color(color),

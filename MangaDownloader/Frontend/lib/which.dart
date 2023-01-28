@@ -9,7 +9,7 @@ class Which extends StatefulWidget
 
 	Which({ required this.close, required this.next });
 
-	String GetChapter()
+	String GetChapterValue()
 	{
 		return input;
 	}
@@ -72,17 +72,16 @@ class Which_State extends State<Which>
                 		(
                 			onChanged: (input) { setState( ()
                 			{  
-                				var urlPattern = r"(https?|http)://([-A-Z0-9.]+)(/[-A-Z0-9+&@#/%=~_|!:,.;]*)?(\?[A-Z0-9+&@#/%=~_|!:‌​,.;]*)?";
-                				var match = new RegExp(urlPattern, caseSensitive: false).hasMatch(input);
+                				var typed = int.tryParse(input);
 
-                				if(match && input.length > 10)
+                				if(typed == null || typed <= 0)
                 				{
-                					widget.input = input;
-                					widget.buttonEnabled = true;
+                					widget.buttonEnabled = false;
                 				}
                 				else
                 				{
-                					widget.buttonEnabled = false;
+                					widget.buttonEnabled = true;
+                					widget.input = input;
                 				}
 
                 			}); },
@@ -94,7 +93,7 @@ class Which_State extends State<Which>
                 				contentPadding: EdgeInsets.fromLTRB(10, 0, 10, -12),
                 				enabledBorder: OutlineInputBorder(borderSide: BorderSide(width: 1, color: Color(0xff152238))),
 					        	focusedBorder: OutlineInputBorder(borderSide: BorderSide(width: 1, color: Color(0xff152238))),
-					        	label: Text('URL:', style: TextStyle(color: Color(0xff152238)))
+					        	label: Text('Number:', style: TextStyle(color: Color(0xff152238)))
 					    	),
                 		)
                 	)
@@ -106,7 +105,7 @@ class Which_State extends State<Which>
                 	child: Container
                 	(
                 		alignment: Alignment.center,
-                		child: Text('Paste the URL where the desired manga is hosted.', style: TextStyle(fontSize: 20), textAlign: TextAlign.center)
+                		child: Text('Enter the chapter number explicitly.', style: TextStyle(fontSize: 20), textAlign: TextAlign.center)
                 	)
                 ),
 
