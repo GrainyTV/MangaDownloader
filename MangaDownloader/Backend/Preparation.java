@@ -51,17 +51,14 @@ class Preparation implements Runnable
 
 			try
 			{
-				/*Document document = (ContainsPlaceholder())
+				Document document = (ContainsPlaceholder())
 				? Jsoup.connect(InsertChapterIntoURL()).userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36").timeout(60000).get()
 				: Jsoup.connect(url).userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36").timeout(60000).get();
 				Elements images = document.getElementsByTag("img");
 				
 				DisposeUnnecessaryImages(images);
 				StartImageProcess(images);
-				CreatePDF();*/
-
-				Document document = Jsoup.connect("https://edu.vik.bme.hu/mod/quiz/review.php?attempt=394772&cmid=74264").userAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36").timeout(60000).get();
-				System.out.println(document);
+				CreatePDF();
 			}
 			catch(HttpStatusException e)
 			{
