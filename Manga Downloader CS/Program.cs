@@ -1,5 +1,14 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.IO;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
+/// <summary>
+/// The Program class decides what operations to start
+/// based on the user-input.
+/// </summary>
+///----------
 class Program
 {
 	delegate void ApplicationJunction();
@@ -38,6 +47,8 @@ class Program
 		createChapterProcess = CreateSingleChapter;
 	}
 
+	/// <summary>The run method creates folders to work in and invokes the appropriate processing mode.</summary>
+	///--------------
 	public void Run()
 	{
 		var temporaryImageFolder = Directory.CreateDirectory("images");
@@ -48,70 +59,48 @@ class Program
 		temporaryImageFolder.Delete();
 	}
 
+	/// <summary>The method called when we need to process a single manga chapter.</summary>
+	///------------------------------
 	public void CreateSingleChapter()
 	{
 		var preparationValue = new Preparation();
 		Stopwatch stopWatch = new Stopwatch();
-
-		/// Syncronized Solution
-		/// ---------------------------------------------------------------
-		Console.WriteLine("Sync");
-		stopWatch = Stopwatch.StartNew();
-		preparationValue.ExtractNecessaryPageDataSync(Url);
-
-		stopWatch.Stop();
-		Console.WriteLine(stopWatch.Elapsed + "\n");
-		/// ---------------------------------------------------------------
-
-		/// ThreadPool Solution
-		/// ---------------------------------------------------------------
-		Console.WriteLine("ThreadPool");
-		stopWatch = Stopwatch.StartNew();
-
-		/*using(var countdownEvent = new CountdownEvent(1))
-		{
-			for(int i = 0; i < 1; ++i)
-			{
-				ThreadPool.QueueUserWorkItem(param => { Preparation.ExtractNecessaryPageDataPool(param); countdownEvent.Signal(); }, link.Replace("{0}", (i + 1).ToString()));
-			}
-
-			countdownEvent.Wait();
-		}*/
-
-		using(var countdownEvent = new CountdownEvent(1))
-		{
-			ThreadPool.QueueUserWorkItem(param => { Preparation.ExtractNecessaryPageDataPool(param); countdownEvent.Signal(); }, Url);
-			countdownEvent.Wait();
-		}
-
-		
-		stopWatch.Stop();
-		Console.WriteLine(stopWatch.Elapsed + "\n");
-		/// ---------------------------------------------------------------
 
 		/// Asyncronized Solution
 		/// ---------------------------------------------------------------
 		Console.WriteLine("Async");
 		stopWatch = Stopwatch.StartNew();
 		
-		var tasks = new List<Task>();
-		tasks.Add(preparationValue.ExtractNecessaryPageDataAsync(Url));
-
-		Task.WhenAll(tasks).Wait();
+		preparationValue.ExtractNecessaryPageData(Url).Wait();
 
 		stopWatch.Stop();
 		Console.WriteLine(stopWatch.Elapsed + "\n");
 		/// ---------------------------------------------------------------
 	}
 
-	public /*async Task*/void CreateMultipleChapters()
+	/// <summary>The method called when we need to process multiple manga chapters.</summary>
+	///---------------------------------
+	public void CreateMultipleChapters()
 	{
-
+		//var tasks = new List<Task>();
+		//tasks.Add(preparationValue.ExtractNecessaryPageDataAsync(Url));
+		//Task.WhenAll(tasks).Wait();
 	}
 
-	static void Main(string[] args)
+	/// <summary>The entry point of our application.</summary>
+	///---------------
+	static void Main()
 	{
-		Program program = (args.Length == 4) ? new Program(int.Parse(args[0]), int.Parse(args[1]), args[2], args[3]) : new Program(int.Parse(args[0]), args[1], args[2]);
-		program.Run();
+		// Program program = (args.Length == 4) ? new Program(int.Parse(args[0]), int.Parse(args[1]), args[2], args[3]) : new Program(int.Parse(args[0]), args[1], args[2]);
+		// program.Run();
+
+		var reader = new StreamReader("testURLs.txt");
+
+		do
+		{
+			var program = new Program(1, "Shadows House", reader.ReadLine());
+			program.Run();
+
+		} while(reader.EndOfStream == false);	
 	}
 }
