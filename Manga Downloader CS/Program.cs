@@ -4,6 +4,22 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
+struct UserInput
+{
+	public int FirstChapter { get; init; }
+	public int FinalChapter { get; init; }
+	public string Title { get; init; }
+	public string Url { get; init; }
+
+	public UserInput(int firstChapter, int finalChapter, string title, string url)
+	{
+		FirstChapter = firstChapter;
+		FinalChapter = finalChapter;
+		Title = title;
+		Url = url;
+	}
+}
+
 /// <summary>
 /// The Program class decides what operations to start
 /// based on the user-input.
@@ -13,10 +29,7 @@ class Program
 {
 	delegate void ApplicationJunction();
 	ApplicationJunction createChapterProcess;
-	public int FirstChapter { get; init; }
-	public int FinalChapter { get; init; }
-	public string Title { get; init; }
-	public string Url { get; init; }
+	UserInput userGivenData;
 
 	/// <summary>Constructor for creating multiple manga chapters.</summary>
 	/// <param name="firstChapter">The chosen first chapter to include from the manga.</param>
@@ -26,10 +39,7 @@ class Program
 	///-------------------------------------------------------------------------
 	public Program(int firstChapter, int finalChapter, string title, string url)
 	{
-		FirstChapter = firstChapter;
-		FinalChapter = finalChapter;
-		Title = title;
-		Url = url;
+		userGivenData = new UserInput(firstChapter, finalChapter, title, url);
 		createChapterProcess = CreateMultipleChapters;
 	}
 
@@ -40,10 +50,7 @@ class Program
 	///--------------------------------------------------
 	public Program(int chapter, string title, string url)
 	{
-		FirstChapter = chapter;
-		FinalChapter = -1;
-		Title = title;
-		Url = url;
+		userGivenData = new UserInput(chapter, -1, title, url);
 		createChapterProcess = CreateSingleChapter;
 	}
 
@@ -52,11 +59,11 @@ class Program
 	public void Run()
 	{
 		var temporaryImageFolder = Directory.CreateDirectory("images");
-		Directory.CreateDirectory(Title);
+		Directory.CreateDirectory(userGivenData.Title);
 
 		createChapterProcess.Invoke();
 
-		temporaryImageFolder.Delete();
+		//temporaryImageFolder.Delete();
 	}
 
 	/// <summary>The method called when we need to process a single manga chapter.</summary>
@@ -64,6 +71,8 @@ class Program
 	public void CreateSingleChapter()
 	{
 		var preparationValue = new Preparation();
+		var imageHandler = new Image();
+
 		Stopwatch stopWatch = new Stopwatch();
 
 		/// Asyncronized Solution
@@ -71,7 +80,15 @@ class Program
 		Console.WriteLine("Async");
 		stopWatch = Stopwatch.StartNew();
 		
-		preparationValue.ExtractNecessaryPageData(Url).Wait();
+		try
+		{
+			var listOfImageUrls = preparationValue.ExtractNecessaryPageData(userGivenData.Url).Result;
+			imageHandler.StartProcessing(userGivenData.Url, listOfImageUrls).Wait();
+		}
+		catch(AggregateException ex)
+		{
+			Console.WriteLine(ex.InnerException.Message);
+		}
 
 		stopWatch.Stop();
 		Console.WriteLine(stopWatch.Elapsed + "\n");
@@ -94,13 +111,20 @@ class Program
 		// Program program = (args.Length == 4) ? new Program(int.Parse(args[0]), int.Parse(args[1]), args[2], args[3]) : new Program(int.Parse(args[0]), args[1], args[2]);
 		// program.Run();
 
-		var reader = new StreamReader("testURLs.txt");
-
-		do
+		/*using(var reader = new StreamReader("testURLs.txt"))
 		{
-			var program = new Program(1, "Shadows House", reader.ReadLine());
-			program.Run();
+			do
+			{
+				var program = new Program(1, Guid.NewGuid().ToString("N"), reader.ReadLine());
+				program.Run();
 
-		} while(reader.EndOfStream == false);	
+			} while(reader.EndOfStream == false);
+		}*/
+
+		//var program = new Program(1, "Shadows House", "https://ww5.mangakakalot.tv/chapter/manga-di980617/chapter-1");
+		//var program = new Program(1, "Shadows House", "https://lfe.org/");
+
+		var program = new Program(1, "Shadows House", "https://chapmanganato.com/manga-mn989748/chapter-165");
+		program.Run();
 	}
 }
