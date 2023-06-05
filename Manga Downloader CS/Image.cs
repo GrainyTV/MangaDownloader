@@ -8,24 +8,23 @@ class Image
 {
 	static readonly HttpClient httpClient = new HttpClient();
 
-	public async Task StartProcessing(string pageUrl, List<string> imageLinks)
+	public async Task StartProcessing(string pageUrl, string title, List<string> imageLinks)
 	{
 		var list = new List<Task>();
-		var index = 0;
 
-		foreach(var imageLink in imageLinks)
+		for(int i = 0; i < imageLinks.Count; ++i)
 		{
+			Directory.CreateDirectory(Path.Combine("images", title));
+
 			list.Add
 			(
 				httpClient.DownloadFileTaskAsync
 				(
-					imageLink, 
-					Path.Combine("images", String.Format("{0}.png", index + 1)), 
+					imageLinks[i], 
+					Path.Combine("images", title, String.Format("{0}.png", i + 1)), 
 					new Uri(pageUrl).GetLeftPart(UriPartial.Authority)
 				)
 			);
-			
-			++index;
 		}
 
 		await Task.WhenAll(list);

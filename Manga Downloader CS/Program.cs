@@ -59,7 +59,7 @@ class Program
 	public void Run()
 	{
 		var temporaryImageFolder = Directory.CreateDirectory("images");
-		Directory.CreateDirectory(userGivenData.Title);
+		//Directory.CreateDirectory(userGivenData.Title);
 
 		createChapterProcess.Invoke();
 
@@ -83,11 +83,12 @@ class Program
 		try
 		{
 			var listOfImageUrls = preparationValue.ExtractNecessaryPageData(userGivenData.Url).Result;
-			imageHandler.StartProcessing(userGivenData.Url, listOfImageUrls).Wait();
+			imageHandler.StartProcessing(userGivenData.Url, userGivenData.Title, listOfImageUrls).Wait();
 		}
 		catch(AggregateException ex)
 		{
 			Console.WriteLine(ex.InnerException.Message);
+			Console.WriteLine(ex.StackTrace);
 		}
 
 		stopWatch.Stop();
@@ -111,7 +112,7 @@ class Program
 		// Program program = (args.Length == 4) ? new Program(int.Parse(args[0]), int.Parse(args[1]), args[2], args[3]) : new Program(int.Parse(args[0]), args[1], args[2]);
 		// program.Run();
 
-		/*using(var reader = new StreamReader("testURLs.txt"))
+		using(var reader = new StreamReader("testURLs.txt"))
 		{
 			do
 			{
@@ -119,12 +120,6 @@ class Program
 				program.Run();
 
 			} while(reader.EndOfStream == false);
-		}*/
-
-		//var program = new Program(1, "Shadows House", "https://ww5.mangakakalot.tv/chapter/manga-di980617/chapter-1");
-		//var program = new Program(1, "Shadows House", "https://lfe.org/");
-
-		var program = new Program(1, "Shadows House", "https://chapmanganato.com/manga-mn989748/chapter-165");
-		program.Run();
+		}
 	}
 }

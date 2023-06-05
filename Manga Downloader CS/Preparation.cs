@@ -24,7 +24,7 @@ class Preparation
 
 	/// <summary>An async method that request a website, collects all the images and validates them.</summary>
 	/// <param name="url">The URL of the website.</param>
-	///---------------------------------------------------
+	///-----------------------------------------------------------------
 	public async Task<List<string>> ExtractNecessaryPageData(string url)
 	{
 		var website = await httpClient.LoadFromWebAsync(url);
@@ -34,10 +34,10 @@ class Preparation
 		{
 			await DisposeUnnecessaryImages(images);
 
-			foreach(var key in htmlImageBlocks.Keys)
+			/*foreach(var key in htmlImageBlocks.Keys)
 			{
 				Console.WriteLine($"{key} - {htmlImageBlocks[key].Count}");
-			}
+			}*/
 
 			// Query for the longest entry we have (We need the div with the most images.)
 
@@ -49,7 +49,7 @@ class Preparation
 
 	/// <summary>An async method to store all valid (div-image) pairs in a dictionary.</summary>
 	/// <param name="images">All the img nodes found on the website.</param>
-	///------------------------------------------------------------------
+	///-----------------------------------------------------------
 	async Task DisposeUnnecessaryImages(HtmlNodeCollection images)
 	{
 		var list = new List<Task<RequiredWebData>>();
@@ -62,14 +62,19 @@ class Preparation
 		}
 
 		// Check the result of all the finished tasks
-
-		while(list.Count > 0)
+		try
 		{
-			var finishedTask = await Task.WhenAny(list);
+			Task.WaitAll(list.ToArray());
+		}
+		catch(Exception)
+		{
+		}
 
-			try
-			{		
-				var query = await finishedTask;
+		foreach(var result in list)
+		{
+			if(result.IsFaulted == false)
+			{
+				var query = await result;
 
 				if(htmlImageBlocks.ContainsKey(query.ClassAttribute))
 				{
@@ -80,18 +85,6 @@ class Preparation
 					htmlImageBlocks.Add(query.ClassAttribute, new List<string>());
 					htmlImageBlocks[query.ClassAttribute].Add(query.ImageLink);
 				}
-
-				list.Remove(finishedTask);
-			}
-			catch(InvalidOperationException ex)
-			{
-				// Print exception messages for debugging purposes
-
-				Console.WriteLine(ex.Message);
-
-				// Expected behavior for invalid images.
-				
-				list.Remove(finishedTask);
 			}
 		}
 	} 
