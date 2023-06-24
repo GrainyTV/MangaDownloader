@@ -22,7 +22,7 @@ class Preparation
 		htmlImageBlocks = new Dictionary<string, List<string>>();
 	}
 
-	/// <summary>An async method that request a website, collects all the images and validates them.</summary>
+	/// <summary>An async method that requests a website, collects all the images and validates them.</summary>
 	/// <param name="url">The URL of the website.</param>
 	///-----------------------------------------------------------------
 	public async Task<List<string>> ExtractNecessaryPageData(string url)
@@ -30,16 +30,18 @@ class Preparation
 		var website = await httpClient.LoadFromWebAsync(url);
 		var images = website.DocumentNode.SelectNodes("//img");
 
+		// There are images on the provided website
+
 		if(images != null)
 		{
 			await DisposeUnnecessaryImages(images);
 
-			/*foreach(var key in htmlImageBlocks.Keys)
+			foreach(var key in htmlImageBlocks.Keys)
 			{
 				Console.WriteLine($"{key} - {htmlImageBlocks[key].Count}");
-			}*/
+			}
 
-			// Query for the longest entry we have (We need the div with the most images.)
+			// Query for the longest entry we have (Return div with the most images.)
 
 			return htmlImageBlocks.OrderByDescending(dictionary => dictionary.Value.Count).First().Value;
 		}
@@ -62,19 +64,12 @@ class Preparation
 		}
 
 		// Check the result of all the finished tasks
-		try
-		{
-			Task.WaitAll(list.ToArray());
-		}
-		catch(Exception)
-		{
-		}
 
-		foreach(var result in list)
+		foreach(var entry in list)
 		{
-			if(result.IsFaulted == false)
+			try
 			{
-				var query = await result;
+				var query = await entry;
 
 				if(htmlImageBlocks.ContainsKey(query.ClassAttribute))
 				{
@@ -85,6 +80,10 @@ class Preparation
 					htmlImageBlocks.Add(query.ClassAttribute, new List<string>());
 					htmlImageBlocks[query.ClassAttribute].Add(query.ImageLink);
 				}
+			}
+			catch(InvalidOperationException)
+			{
+				// Expected behavior for invalid images
 			}
 		}
 	} 

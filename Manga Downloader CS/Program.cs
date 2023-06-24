@@ -59,7 +59,7 @@ class Program
 	public void Run()
 	{
 		var temporaryImageFolder = Directory.CreateDirectory("images");
-		//Directory.CreateDirectory(userGivenData.Title);
+		Directory.CreateDirectory(userGivenData.Title);
 
 		createChapterProcess.Invoke();
 
@@ -72,6 +72,7 @@ class Program
 	{
 		var preparationValue = new Preparation();
 		var imageHandler = new Image();
+		var pdfCreator = new PdfCreator();
 
 		Stopwatch stopWatch = new Stopwatch();
 
@@ -84,6 +85,12 @@ class Program
 		{
 			var listOfImageUrls = preparationValue.ExtractNecessaryPageData(userGivenData.Url).Result;
 			imageHandler.StartProcessing(userGivenData.Url, userGivenData.Title, listOfImageUrls).Wait();
+			
+			pdfCreator.GenerateNewFromImages
+			(
+				Path.Combine("images", userGivenData.Title),
+				Path.Combine(userGivenData.Title, string.Format("{0} Chapter {1}.pdf", userGivenData.Title, userGivenData.FirstChapter))
+			);
 		}
 		catch(AggregateException ex)
 		{

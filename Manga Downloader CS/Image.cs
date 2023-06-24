@@ -10,18 +10,17 @@ class Image
 
 	public async Task StartProcessing(string pageUrl, string title, List<string> imageLinks)
 	{
+		Directory.CreateDirectory(Path.Combine("images", title));
 		var list = new List<Task>();
 
 		for(int i = 0; i < imageLinks.Count; ++i)
 		{
-			Directory.CreateDirectory(Path.Combine("images", title));
+			var extension = Path.GetExtension(imageLinks[i]);			
 
-			list.Add
-			(
-				httpClient.DownloadFileTaskAsync
-				(
+			list.Add(
+				httpClient.DownloadFileTaskAsync(
 					imageLinks[i], 
-					Path.Combine("images", title, String.Format("{0}.png", i + 1)), 
+					Path.Combine("images", title, String.Format("{0}{1}", i + 1, (extension != String.Empty) ? extension : ".jpg")), 
 					new Uri(pageUrl).GetLeftPart(UriPartial.Authority)
 				)
 			);
