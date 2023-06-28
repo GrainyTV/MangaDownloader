@@ -27,9 +27,9 @@ struct UserInput
 ///----------
 class Program
 {
-	delegate void ApplicationJunction();
-	ApplicationJunction createChapterProcess;
-	UserInput userGivenData;
+	private delegate void ApplicationJunction();
+	private ApplicationJunction createChapterProcess;
+	private UserInput userGivenData;
 
 	/// <summary>Constructor for creating multiple manga chapters.</summary>
 	/// <param name="firstChapter">The chosen first chapter to include from the manga.</param>
@@ -59,11 +59,12 @@ class Program
 	public void Run()
 	{
 		var temporaryImageFolder = Directory.CreateDirectory("images");
-		Directory.CreateDirectory(userGivenData.Title);
+		var imageDirectory = Directory.CreateDirectory(Path.Combine("images", userGivenData.Title));
+		var resultDirectory = Directory.CreateDirectory(userGivenData.Title);
 
 		createChapterProcess.Invoke();
-
-		//temporaryImageFolder.Delete();
+		imageDirectory.Delete(true);
+		temporaryImageFolder.Delete();
 	}
 
 	/// <summary>The method called when we need to process a single manga chapter.</summary>
@@ -74,33 +75,41 @@ class Program
 		var imageHandler = new Image();
 		var pdfCreator = new PdfCreator();
 
-		Stopwatch stopWatch = new Stopwatch();
-
-		/// Asyncronized Solution
-		/// ---------------------------------------------------------------
-		Console.WriteLine("Async");
-		stopWatch = Stopwatch.StartNew();
-		
 		try
 		{
+			Stopwatch st = new Stopwatch();
+			st = Stopwatch.StartNew();
+
 			var listOfImageUrls = preparationValue.ExtractNecessaryPageData(userGivenData.Url).Result;
+
+			st.Stop();
+			Console.WriteLine("Web scraping: " + st.Elapsed);
+			st = Stopwatch.StartNew();
+
 			imageHandler.StartProcessing(userGivenData.Url, userGivenData.Title, listOfImageUrls).Wait();
+
+			st.Stop();
+			Console.WriteLine("Image downloading: " + st.Elapsed);
+			st = Stopwatch.StartNew();
 			
-			pdfCreator.GenerateNewFromImages
-			(
+			pdfCreator.GenerateNewFromImages(
 				Path.Combine("images", userGivenData.Title),
 				Path.Combine(userGivenData.Title, string.Format("{0} Chapter {1}.pdf", userGivenData.Title, userGivenData.FirstChapter))
 			);
+
+			st.Stop();
+			Console.WriteLine("PDF creating: " + st.Elapsed + "\n");
 		}
 		catch(AggregateException ex)
 		{
-			Console.WriteLine(ex.InnerException.Message);
-			Console.WriteLine(ex.StackTrace);
+			if(ex.InnerException != null)
+			{
+				Console.WriteLine(ex.InnerException.Message);
+				Console.WriteLine(ex.StackTrace);
+			}
+			
+			Directory.Delete(userGivenData.Title, false);
 		}
-
-		stopWatch.Stop();
-		Console.WriteLine(stopWatch.Elapsed + "\n");
-		/// ---------------------------------------------------------------
 	}
 
 	/// <summary>The method called when we need to process multiple manga chapters.</summary>
@@ -116,17 +125,27 @@ class Program
 	///---------------
 	static void Main()
 	{
-		// Program program = (args.Length == 4) ? new Program(int.Parse(args[0]), int.Parse(args[1]), args[2], args[3]) : new Program(int.Parse(args[0]), args[1], args[2]);
-		// program.Run();
+		var program = new Program(1, 10, "Shadows House", "https://chapmanganato.com/manga-mn989748/chapter-{0}");
+		program.Run();
 
-		using(var reader = new StreamReader("testURLs.txt"))
+		// Testing
+		// |
+		// V
+
+		/*using(var reader = new StreamReader("testURLs.txt"))
 		{
 			do
 			{
-				var program = new Program(1, Guid.NewGuid().ToString("N"), reader.ReadLine());
-				program.Run();
+				var line = reader.ReadLine();
+
+				if(line != null)
+				{
+					string[] split = line.Split(';');
+					var program = new Program(int.Parse(split[2]), split[1], split[0]);
+					program.Run();
+				}	
 
 			} while(reader.EndOfStream == false);
-		}
+		}*/
 	}
 }

@@ -11,8 +11,8 @@ using HtmlAgilityPack;
 ///--------------
 class Preparation
 {
-	static readonly HtmlWeb httpClient = new HtmlWeb();
-	Dictionary<string, List<string>> htmlImageBlocks;
+	private static readonly HtmlWeb httpClient = new HtmlWeb();
+	private Dictionary<string, List<string>> htmlImageBlocks;
 
 	/// <summary>The constructor sets the User-Agent to Google Chrome's and creates a dictionary.</summary>
 	///-----------------
@@ -30,18 +30,22 @@ class Preparation
 		var website = await httpClient.LoadFromWebAsync(url);
 		var images = website.DocumentNode.SelectNodes("//img");
 
+		//
 		// There are images on the provided website
+		//
 
 		if(images != null)
 		{
-			await DisposeUnnecessaryImages(images);
+			DisposeUnnecessaryImages(images);
 
-			foreach(var key in htmlImageBlocks.Keys)
+			/*foreach(var key in htmlImageBlocks.Keys)
 			{
 				Console.WriteLine($"{key} - {htmlImageBlocks[key].Count}");
-			}
+			}*/
 
+			//
 			// Query for the longest entry we have (Return div with the most images.)
+			//
 
 			return htmlImageBlocks.OrderByDescending(dictionary => dictionary.Value.Count).First().Value;
 		}
@@ -52,38 +56,25 @@ class Preparation
 	/// <summary>An async method to store all valid (div-image) pairs in a dictionary.</summary>
 	/// <param name="images">All the img nodes found on the website.</param>
 	///-----------------------------------------------------------
-	async Task DisposeUnnecessaryImages(HtmlNodeCollection images)
+	private void DisposeUnnecessaryImages(HtmlNodeCollection images)
 	{
-		var list = new List<Task<RequiredWebData>>();
-
-		// Push all image tasks to container
-
 		foreach(var image in images)
-		{
-			list.Add(Dispose.LinkValidator(image));
-		}
-
-		// Check the result of all the finished tasks
-
-		foreach(var entry in list)
 		{
 			try
 			{
-				var query = await entry;
+				var query = Dispose.LinkValidator(image);
 
-				if(htmlImageBlocks.ContainsKey(query.ClassAttribute))
-				{
-					htmlImageBlocks[query.ClassAttribute].Add(query.ImageLink);
-				}
-				else
-				{
-					htmlImageBlocks.Add(query.ClassAttribute, new List<string>());
-					htmlImageBlocks[query.ClassAttribute].Add(query.ImageLink);
-				}
+				htmlImageBlocks.AddOrUpdate(query.ClassAttribute, query.ImageLink);
 			}
 			catch(InvalidOperationException)
 			{
+				//
 				// Expected behavior for invalid images
+				// Possible causes:
+				//  -no src or data-src attribute
+				//  -invalid URL in source attribute
+				//  -no parent div found with class attribute
+				//
 			}
 		}
 	} 

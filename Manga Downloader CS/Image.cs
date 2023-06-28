@@ -6,11 +6,10 @@ using System.Collections.Generic;
 
 class Image
 {
-	static readonly HttpClient httpClient = new HttpClient();
+	private static readonly HttpClient httpClient = new HttpClient();
 
 	public async Task StartProcessing(string pageUrl, string title, List<string> imageLinks)
 	{
-		Directory.CreateDirectory(Path.Combine("images", title));
 		var list = new List<Task>();
 
 		for(int i = 0; i < imageLinks.Count; ++i)

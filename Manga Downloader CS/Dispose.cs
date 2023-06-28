@@ -31,20 +31,17 @@ class Dispose
 	/// <returns>The location of the img node combined with the name of the div where it is found.</returns>
 	/// <exception cref="InvalidOperationException">An exception if the node doesn't have a valid location / URL.</exception> 
 	///--------------------------------------------------------------------
-	public static async Task<RequiredWebData> LinkValidator(HtmlNode image)
+	public static RequiredWebData LinkValidator(HtmlNode image)
 	{
-		return await Task.Run(() => 
+		var imageLink = ExtractUrlFromImgNode(image);
+
+		if(Uri.IsWellFormedUriString(imageLink, UriKind.Absolute))
 		{
-			var imageLink = ExtractUrlFromImgNode(image);
+			var classAttribute = FindClassAttributeOfParentDiv(image);
+			return new RequiredWebData(classAttribute, imageLink);
+		}
 
-			if(Uri.IsWellFormedUriString(imageLink, UriKind.Absolute))
-			{
-				var classAttribute = FindClassAttributeOfParentDiv(image);
-				return new RequiredWebData(classAttribute, imageLink);
-			}
-
-			throw new InvalidOperationException($"The src or data-src attribute of the image points to an invalid URL!\n-> {imageLink} <-");
-		});
+		throw new InvalidOperationException($"The src or data-src attribute of the image points to an invalid URL!\n-> {imageLink} <-");
 	}
 
 	/// <summary>A helper method to find the attribute, which contains the location / URL of our image.</summary>
@@ -52,7 +49,7 @@ class Dispose
 	/// <returns>The location / URL of the img node.</returns>
 	/// <exception cref="InvalidOperationException">Exception if the node doesn't have an "src" or "data-src" attribute.</exception> 
 	///------------------------------------------------
-	static string ExtractUrlFromImgNode(HtmlNode image)
+	private static string ExtractUrlFromImgNode(HtmlNode image)
 	{
 		var dataSrc = image.GetAttributeValue("data-src", null);
 		var src = image.GetAttributeValue("src", null);
@@ -67,7 +64,7 @@ class Dispose
 	/// <returns>The first parent of an img node that is of type div.</returns>
 	/// <exception cref="InvalidOperationException">Exception if the node doesn't have a parent with type "div" and "class" attribute.</exception> 
 	///--------------------------------------------------------
-	static string FindClassAttributeOfParentDiv(HtmlNode image)
+	private static string FindClassAttributeOfParentDiv(HtmlNode image)
 	{
 		foreach(var parent in image.Ancestors())
 		{
