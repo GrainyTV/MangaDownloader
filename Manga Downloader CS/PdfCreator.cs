@@ -1,80 +1,85 @@
+//
+// .NET usings
+//
 using System;
 using System.IO;
+using System.Linq;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
+
+//
+// PDFSharp usings
+//
 using PdfSharp.Pdf;
 using PdfSharp.Drawing;
 
 class PdfCreator
 {
-	private PdfDocument document;
+	private static readonly object documentWriterLock = new object();
 
 	private class NumericalComparator : IComparer<string>
 	{
 		public int Compare(string? former, string? latter)
 		{
-			try
-			{
-				int formerI = (former == null) ? throw new InvalidOperationException("Trying to compare null values numerically.") : int.Parse(Path.GetFileNameWithoutExtension(former));
-				int latterI = (latter == null) ? throw new InvalidOperationException("Trying to compare null values numerically.") : int.Parse(Path.GetFileNameWithoutExtension(latter));
+			Debug.Assert(former != null && latter != null, "Passing null value to NumericalComparator class.");
 
-				if(formerI == latterI)
-				{
-					return 0;
-				}
+			UInt32 formerI = 0;
+			UInt32 latterI = 0;
 
-				return (formerI < latterI) ? -1 : 1;
-			}
-			catch(FormatException)
+			UInt32.TryParse(Path.GetFileNameWithoutExtension(former), out formerI);
+			UInt32.TryParse(Path.GetFileNameWithoutExtension(latter), out latterI);
+
+			Debug.Assert(formerI > 0 && latterI > 0, "0 index found in NumericalComparator class.");
+
+			if (formerI == latterI)
 			{
-				throw new InvalidOperationException($"Trying to compare non-numeric items: {former} and {latter}.");
+				return 0;
 			}
+
+			return (formerI < latterI) ? -1 : 1;
 		}
 	}
 
-	public PdfCreator()
+	public static void GenerateNewFromImages(string pathToImages, string fileName)
 	{
-		document = new PdfDocument();
-	}
-
-	public void GenerateNewFromImages(string pathToImages, string fileName)
-	{
-		var files = Directory.GetFiles(pathToImages);
-		var numericalCompare = new NumericalComparator();
+		string[] files = Directory.GetFiles(pathToImages);
+		NumericalComparator numericalCompare = new NumericalComparator();
 		Array.Sort(files, numericalCompare);
 
-		foreach(var file in files)
+		using PdfDocument document = new PdfDocument();
+		document.AddPages(files.Length);
+
+		Parallel.For(0, files.Length, i =>
 		{
-			XImage image = default(XImage);
+			XImage? image = null;
 
 			try
 			{
-				image = XImage.FromFile(file);
+				image = XImage.FromFile(files[i]);
 			}
-			catch(InvalidOperationException)
+			catch (InvalidOperationException)
 			{
 				//
 				// Restore stripped JFIF header of JPEG image
 				// To make it work with PDFSharp
 				//
-				
-				image = PdfCreator.RestoreJfifHeader(file);
 
-				if(image == null)
-				{
-					throw new InvalidOperationException($"Image: {file} could not be loaded even after error correction code.");
-				}
+				image = PdfCreator.RestoreJfifHeader(files[i]);
+				Debug.Assert(image != null, $"{files[i]} could not be loaded even after error correction code.");
 			}
-			
-			var page = new PdfPage()
+
+			PdfPage page = document.Pages[i];
+			page.Width = image.PixelWidth;
+			page.Height = image.PixelHeight;
+
+			lock (documentWriterLock)
 			{
-				Width = image.PixelWidth,
-				Height = image.PixelHeight
-			};	
-	
-			document.AddPage(page);
-			var renderer = XGraphics.FromPdfPage(page);
-			renderer.DrawImage(image, 0, 0, page.Width, page.Height);	
-		}
+				XGraphics renderer = XGraphics.FromPdfPage(page);
+				renderer.DrawImage(image, 0, 0, page.Width, page.Height);
+			}
+		});
 
 		document.Save(fileName);
 	}
@@ -83,42 +88,42 @@ class PdfCreator
 	{
 		//
 		// Proper first 21 bytes for a JPEG image
-		//	
-		
-		var jfifHeader = new byte[]
-		{ 
+		//
+
+		byte[] jfifHeader = new byte[]
+		{
 			0xFF, 0xD8, 0xFF,
 			0xE0, 0x00, 0x10,
 			0x4A, 0x46, 0x49, 0x46,
 			0x00, 0x01, 0x01, 0x01,
 			0x00, 0x48, 0x00, 0x48,
-			0x00, 0x00, 0xFF 
+			0x00, 0x00, 0xFF
 		};
-			
-		using(var stream = new FileStream(file, FileMode.Open))
+
+		using (var stream = new FileStream(file, FileMode.Open))
 		{
 			//
 			// Skip the first 3 bytes
 			// Should be the same for all JPEG images
 			//
-			
+
 			const int OFFSET = 3;
 			var amount = (int) stream.Length - OFFSET;
 			var content = new byte[amount];
-			
+
 			//
 			// Set starting position to 4th byte
 			// Read to the end
 			//
-			
+
 			stream.Seek(OFFSET, SeekOrigin.Begin);
 			stream.Read(content, 0, amount);
 
 			//
 			// Refresh file with the new data
 			//
-			
-			using(var newStream = new FileStream(file, FileMode.Create))
+
+			using (var newStream = new FileStream(file, FileMode.Create))
 			{
 				newStream.Write(jfifHeader, 0, jfifHeader.Length);
 				newStream.Write(content, 0, content.Length);
