@@ -17,46 +17,51 @@ struct RequiredWebData
 
 class Dispose
 {
-	public static RequiredWebData LinkValidator(HtmlNode image)
+	public static RequiredWebData? LinkValidator(HtmlNode image)
 	{
-		var imageLink = ExtractUrlFromImgNode(image);
+		string? imageLink = Dispose.ExtractUrlFromImgNode(image);
 
 		if (Uri.IsWellFormedUriString(imageLink, UriKind.Absolute))
 		{
-			var classAttribute = FindClassAttributeOfParentDiv(image);
-			return new RequiredWebData() {
-					   ClassAttribute = classAttribute, ImageLink = imageLink
-			};
-		}
+			string? classAttribute = Dispose.FindClassAttributeOfParentDiv(image);
 
-		throw new InvalidOperationException($"The src or data-src attribute of the image points to an invalid URL!\n-> {imageLink} <-");
-	}
-
-	private static string ExtractUrlFromImgNode(HtmlNode image)
-	{
-		var dataSrc = image.GetAttributeValue("data-src", null);
-		var src = image.GetAttributeValue("src", null);
-
-		return (dataSrc != null) ? dataSrc :
-		       (src != null) ? src :
-		       throw new InvalidOperationException("An HTML img node has neither \"src\", nor \"data-src\" attribute!");
-	}
-
-	private static string FindClassAttributeOfParentDiv(HtmlNode image)
-	{
-		foreach (var parent in image.Ancestors())
-		{
-			if (parent.Name.Equals("div"))
+			if (classAttribute is not null)
 			{
-				var classAttr = parent.GetAttributeValue("class", null);
-
-				if (classAttr != null)
+				return new RequiredWebData()
 				{
-					return classAttr;
-				}
+					ClassAttribute = classAttribute,
+					ImageLink = imageLink,
+				};
 			}
 		}
 
-		throw new InvalidOperationException("There is no parent node with type \"div\" and attribute \"class\" in the ancestry tree!");
+		return default(RequiredWebData);
+	}
+
+	private static string? ExtractUrlFromImgNode(HtmlNode image)
+	{
+		return image.GetAttributeValue("data-src", null) ??
+			   image.GetAttributeValue("src", null) ??
+			   default(string);
+	}
+
+	private static string? FindClassAttributeOfParentDiv(HtmlNode image)
+	{
+		foreach (HtmlNode parent in image.Ancestors())
+		{
+			if (parent.Name.Equals("div"))
+			{
+				string classAttr = parent.GetAttributeValue("class", null);
+
+				if (classAttr is null)
+				{
+					continue;
+				}
+
+				return classAttr;
+			}
+		}
+
+		return default(string);
 	}
 }

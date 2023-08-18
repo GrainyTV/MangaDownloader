@@ -29,13 +29,18 @@ public class Program
 {
 	public static void CreateSingleChapter(UserInput userGivenData)
 	{
-		var temporaryImageFolder = Directory.CreateDirectory("images");
-		var imageDirectory = Directory.CreateDirectory(Path.Combine("images", userGivenData.Title));
-		var resultDirectory = Directory.CreateDirectory(userGivenData.Title);
+		DirectoryInfo temporaryImageFolder = Directory.CreateDirectory("images");
+		DirectoryInfo imageDirectory = Directory.CreateDirectory(Path.Combine("images", userGivenData.Title));
+		DirectoryInfo resultDirectory = Directory.CreateDirectory(userGivenData.Title);
 
 		List<string> listOfImageUrls = Preparation.ExtractMangaImageUrls(userGivenData.Url);
-		Image.StartDownloading(userGivenData.Url, userGivenData.Title, listOfImageUrls);
-		PdfCreator.GenerateNewFromImages(Path.Combine("images", userGivenData.Title), Path.Combine(userGivenData.Title, string.Format("{0} Chapter {1}.pdf", userGivenData.Title, userGivenData.FirstChapter)));
+
+		if (listOfImageUrls.Count > 0)
+		{
+			Image.StartDownloading(userGivenData.Url, userGivenData.Title, listOfImageUrls);
+			PdfCreator.GenerateNewFromImages(Path.Combine("images", userGivenData.Title),
+											 Path.Combine(userGivenData.Title, string.Format("{0} Chapter {1}.pdf", userGivenData.Title, userGivenData.FirstChapter)));
+		}
 	}
 
 	public static void CreateMultipleChapters(UserInput userGivenData)
@@ -45,7 +50,7 @@ public class Program
 	static void Main()
 	{
 		Action<UserInput>? createChapterProcess = null;
-		UserInput userGivenData = new UserInput(out createChapterProcess, "Shadows House", "https://chapmanganato.com/manga-mn989748/chapter-1", 1);
+		UserInput userGivenData = new UserInput(out createChapterProcess, "The Promised Neverland", "https://ww4.readneverland.com/chapter/the-promised-neverland-chapter-169/", 169);
 		createChapterProcess.Invoke(userGivenData);
 	}
 }
