@@ -2,6 +2,7 @@ using Colors;
 using System;
 
 namespace HelperMethods;
+
 static class Helpers
 {
     public static void WriteLineColor(Color color, params string[] args)
