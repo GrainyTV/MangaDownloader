@@ -9,32 +9,33 @@ using System.Threading.Tasks;
 
 public static class Image
 {
-    private readonly static HttpClient httpClient = new HttpClient();
+    private static readonly HttpClient httpClient = new HttpClient();
 
-    public static Tuple<Guid, List<string>> StartDownloads(Tuple<Guid, Option<List<string>>> process) //Option<List<string>> acquiredUrls, string title, string chapter)
+    public static PathBundle StartDownloads(ImageUrlBundle imageUrlBundle)
     {
-        var acquiredUrls = process.Item2;
-        var uuid = process.Item1;
+        if (imageUrlBundle.Images.HasValue == false)
+        {
+            return new PathBundle { Metadata = imageUrlBundle.Metadata, Paths = Enumerable.Empty<string>().ToList(), };
+        }
 
-        var requestInfo = Program.Processes[uuid];
-        var title = requestInfo.Title;
-        var chapter = requestInfo.Chapter;
+        IEnumerable<string> images = imageUrlBundle.Images.Unwrap();
+        RequestInfo requestInfo = imageUrlBundle.Metadata;
+        string title = requestInfo.Title;
+        int chapter = requestInfo.Id;
         
         Directory.CreateDirectory(title);
         Directory.CreateDirectory($"{title}/{chapter}");
 
-        var imagePaths = acquiredUrls
-            .Unwrap()
+        List<string> imagePaths = images
             .AsParallel()
             .Select(async (url, page) =>
             {
-                var uriFromUrl = new Uri(url);
-                string hasExtension = Path.GetExtension(url);
-                string extension = (hasExtension == String.Empty) ? ".jpg" : hasExtension;
-                string savePath = $"{title}/{chapter}/{page}{extension}";
-                
+                string savePath = $"{title}/{chapter}/{page}";
+
+                var baseAddress = new Uri(requestInfo.Url);
                 var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                httpRequestMessage.Headers.Add("Referer", uriFromUrl.GetLeftPart(UriPartial.Authority));
+                httpRequestMessage.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:x.x.x) Gecko/20041107 Firefox/x.x");
+                httpRequestMessage.Headers.Add("Referer", baseAddress.GetLeftPart(UriPartial.Authority));
 
                 using HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage);
                 using var fileStream = new FileStream(savePath, FileMode.OpenOrCreate);
@@ -47,6 +48,6 @@ public static class Image
             .Select(path => path.Result)
             .ToList();
 
-        return Tuple.Create(uuid, imagePaths);
+        return new PathBundle { Metadata = requestInfo, Paths = imagePaths, };
     }
 }

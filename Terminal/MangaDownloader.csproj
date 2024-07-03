@@ -9,10 +9,12 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateProgramFile>false</GenerateProgramFile>
+    <TrimMode>partial</TrimMode>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
+    <PackageReference Include="Magick.NET-Q8-x64" Version="13.6.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageReference Include="Optional" Version="5.0.0-alpha" />
     <PackageReference Include="PDFsharp" Version="6.0.0" />

@@ -5,107 +5,53 @@ using Optional;
 using Optional.Unsafe;
 using System;
 using System.Linq;
-using System.Threading.Tasks.Dataflow;
 using System.Collections.Generic;
 
 static class Program
 {
     private const Byte SingleChapter = 3;
-
     private const Byte MultipleChapters = 4; 
-
-    public static Dictionary<Guid, RequestInfo> Processes = new Dictionary<Guid, RequestInfo>(); 
-
-    /**
-     * 
-     * args[0] = Title
-     * args[1] = URL
-     * args[2] = Chapter Number
-     * args[3] = Optional<Final Chapter Number>
-     * 
-     */
+ 
+    // args[0] = Title
+    // args[1] = URL
+    // args[2] = Chapter Number
+    // args[3] = Optional<Final Chapter Number>
+    // ----------------------------------------
     private static void Main(string[] args)
     {
         Action application = args.Length switch
         {
-            SingleChapter => () => CreateSingleChapter(args[0], args[1], args[2]),
-            MultipleChapters => () => CreateMultipleChapters(args[0], args[1], args[2], args[3]),
+            SingleChapter => () => CreateChapters(args[0], args[1], args[2], args[2]),
+            MultipleChapters => () => CreateChapters(args[0], args[1], args[2], args[3]),
             _ => () => FailedArguments(),
         };
 
         application.Invoke();
     }
 
-    private static void CreateSingleChapter(string title, string url, string chapter)
+    private static void CreateChapters(string title, string url, string firstChapter, string finalChapter)
     {
-        /* Define the different sequences of the pipeline */
+        int firstChapterAsInt = Int32.Parse(firstChapter);
+        int finalChapterAsInt = Int32.Parse(finalChapter);
+        var creationProcess = new PipeLine();
         
-       // var acquireImageUrls = new TransformBlock<string, Option<List<string>>>(url => Preparation.ExtractMangaImageUrls(url));
-       // var downloadImages = new TransformBlock<Option<List<string>>, List<string>>(acquiredUrls => Image.StartDownloads(acquiredUrls, title, chapter));
-       // var mergeToPdf = new ActionBlock<List<string>>(downloadedImages => Pdf.GenerateNew(downloadedImages, title, chapter));
- 
-        /* Specify parameters for pipeline behaviour */
-        
-       // var linkOptions = new DataflowLinkOptions{ PropagateCompletion = true, };
-
-        /* Join pipeline sequences together in order */
-
-        //acquireImageUrls.LinkTo(downloadImages, linkOptions);
-       // downloadImages.LinkTo(mergeToPdf, linkOptions);
-        
-        /* Provide input to pipeline then signal when you ran out of values */
-
-       // acquireImageUrls.Post(url);
-        //acquireImageUrls.Complete();
- 
-        /* Wait for pipeline to finish */
-        /* Should be invoked on last sequence of pipeline */
-
-        //mergeToPdf.Completion.Wait();
-    }
-
-    private static void CreateMultipleChapters(string title, string url, string firstChapter, string finalChapter)
-    {
-        var pipelineOptions = new ExecutionDataflowBlockOptions{ MaxDegreeOfParallelism = -1, };
-
-        /* Define the different sequences of the pipeline */
-        
-        var acquireImageUrls = new TransformBlock<Guid, Tuple<Guid, Option<List<string>>>>(Preparation.ExtractMangaImageUrls, pipelineOptions);
-        var downloadImages = new TransformBlock<Tuple<Guid, Option<List<string>>>, Tuple<Guid, List<string>>>(Image.StartDownloads, pipelineOptions);
-        var mergeToPdf = new ActionBlock<Tuple<Guid, List<string>>>(Pdf.GenerateNew, pipelineOptions);
- 
-        /* Specify parameters for pipeline behaviour */
-        
-        var linkOptions = new DataflowLinkOptions{ PropagateCompletion = true, };
-
-        /* Join pipeline sequences together in order */
-
-        acquireImageUrls.LinkTo(downloadImages, linkOptions);
-        downloadImages.LinkTo(mergeToPdf, linkOptions);
-        
-        /* Provide input to pipeline then signal when you ran out of values */
-        Enumerable.Range(Int32.Parse(firstChapter), Int32.Parse(finalChapter))
-        .ForEach((chapter, _) =>
+        if (firstChapterAsInt == finalChapterAsInt)
         {
-            Guid processIdentifier = Guid.NewGuid();
-            var userInput = new RequestInfo
-            {
-                Url = String.Format(url, chapter),
-                Title = title,
-                Chapter = chapter,
-            };
+            var userInput = new RequestInfo { Id = firstChapterAsInt, Title = title, Url = url, };
+            creationProcess.AppendNewEntry(userInput);
+        }
+        else
+        {
+            IEnumerable<int> chapters = Enumerable.Range(firstChapterAsInt, finalChapterAsInt);
             
-            Program.Processes[processIdentifier] = userInput;
-            acquireImageUrls.Post(processIdentifier);
-        });
+            chapters.ForEach((chapter, _) =>
+            {
+                var userInput = new RequestInfo { Id = chapter, Title = title, Url = String.Format(url, chapter), };      
+                creationProcess.AppendNewEntry(userInput);
+            });
+        }
 
-        //acquireImageUrls.Post("");
-        acquireImageUrls.Complete();
- 
-        /* Wait for pipeline to finish */
-        /* Should be invoked on last sequence of pipeline */
-
-        mergeToPdf.Completion.Wait();
+        creationProcess.Begin();
     }
 
     private static void FailedArguments()

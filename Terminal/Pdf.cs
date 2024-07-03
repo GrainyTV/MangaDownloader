@@ -7,16 +7,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using System.Text;
+using ImageMagick;
+
 public static class Pdf
 {
-    public static void GenerateNew(Tuple<Guid, List<string>> process) //List<string> images, string title, string chapter)
+    public static void GenerateNew(PathBundle pathBundle)
     {
-        var images = process.Item2;
-        var uuid = process.Item1;
-
-        var requestInfo = Program.Processes[uuid];
-        var title = requestInfo.Title;
-        var chapter = requestInfo.Chapter;
+        List<string> images = pathBundle.Paths;
+        RequestInfo requestInfo = pathBundle.Metadata;
+        string title = requestInfo.Title;
+        int chapter = requestInfo.Id;
 
         using var document = new PdfDocument();
         document.AddPages(images.Count);
@@ -33,6 +34,7 @@ public static class Pdf
         });
 
         document.Save($"{title}/{title} Chapter {chapter}.pdf");
+        Directory.Delete($"{title}/{chapter}", true);
     }
 
     private static XImage LoadImageFromFile(string path)
@@ -43,36 +45,8 @@ public static class Pdf
         }
         catch (InvalidOperationException)
         {
-            /* Broken JFIF header can cause exception */
-            /* Need to apply error correction code */
-
-            var jfifHeader = new byte[]
-            {
-                0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46,
-                0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00,
-                0xFF
-            };
-
-            /* Read contents of image */
-            /* Skip the first 3 bytes */
-            /* Should be the same for all JPEG images */
-
-            using var initialStream = new FileStream(path, FileMode.Open);
-            const int OFFSET = 3;
-            var amount = (int) initialStream.Length - OFFSET;
-            var content = new byte[amount];
-
-            /* Set starting position to 4th byte */
-            /* Then read to the end */
-
-            initialStream.Seek(OFFSET, SeekOrigin.Begin);
-            initialStream.Read(content, 0, amount);
-
-            /* Refresh file with the new data */
-
-            using var newStream = new FileStream(path, FileMode.Create);
-            newStream.Write(jfifHeader, 0, jfifHeader.Length);
-            newStream.Write(content, 0, content.Length);
+            using var image = new MagickImage(path);
+            image.Write(path, MagickFormat.Png24);
 
             return XImage.FromFile(path);
         }
