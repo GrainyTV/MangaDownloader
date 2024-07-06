@@ -1,16 +1,11 @@
-using Colors;
 using ExtensionMethods;
-using HelperMethods;
 using HtmlAgilityPack;
 using Optional;
 using Optional.Collections;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;
-
 using System.Text.RegularExpressions;
 
 public static class Preparation

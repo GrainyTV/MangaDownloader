@@ -1,14 +1,10 @@
 using ExtensionMethods;
-using Optional;
+using SkiaSharp;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-
-using System.Text;
-using ImageMagick;
 
 public static class Pdf
 {
@@ -28,9 +24,9 @@ public static class Pdf
             PdfPage page = document.Pages[pageIndex];
             using XGraphics renderer = XGraphics.FromPdfPage(page);
 
-            page.Width = image.PixelWidth;
-            page.Height = image.PixelHeight;
-            renderer.DrawImage(image, 0, 0, page.Width, page.Height);
+            page.Width = XUnit.FromPoint(image.PixelWidth);
+            page.Height = XUnit.FromPoint(image.PixelHeight);
+            renderer.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point);
         });
 
         document.Save($"{title}/{title} Chapter {chapter}.pdf");
@@ -45,8 +41,18 @@ public static class Pdf
         }
         catch (InvalidOperationException)
         {
-            using var image = new MagickImage(path);
-            image.Write(path, MagickFormat.Png24);
+            SKData encodedPixelData;
+
+            using (FileStream originalFileStream = File.OpenRead(path))
+            {
+                using SKImage image = SKImage.FromEncodedData(originalFileStream);
+                encodedPixelData = image.Encode(SKEncodedImageFormat.Jpeg, 100);
+            }
+
+            using (FileStream newFileStream = File.Open(path, FileMode.Create))
+            {
+                encodedPixelData.SaveTo(newFileStream);
+            }
 
             return XImage.FromFile(path);
         }

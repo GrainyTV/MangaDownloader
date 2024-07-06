@@ -18,7 +18,7 @@ public static class ExtensionUtilities
         return maybe.ValueOrFailure();
     }
 
-    public static void AddPages(this PdfDocument document, int amount)
+    public static void AddPages(this PdfDocument document, Int32 amount)
     {
         if (amount == 0)
             return;

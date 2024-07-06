@@ -1,8 +1,8 @@
 ﻿using Colors;
 using ExtensionMethods;
 using HelperMethods;
-using Optional;
-using Optional.Unsafe;
+//using Optional;
+//using Optional.Unsafe;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Collections.Generic;
 static class Program
 {
     private const Byte SingleChapter = 3;
-    private const Byte MultipleChapters = 4; 
+    private const Byte MultipleChapters = 4;
  
     // args[0] = Title
     // args[1] = URL
