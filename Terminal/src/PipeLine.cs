@@ -9,19 +9,25 @@ public class PipeLine
 
     public PipeLine()
     {
-        // Specify parameters for pipeline behaviour
-        // -----------------------------------------
-        var executionOptions = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, SingleProducerConstrained = true, };
-        var linkageOptions = new DataflowLinkOptions { PropagateCompletion = true, };
+        // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        // ┃ Specify parameters for pipeline behaviour ┃
+        // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+        
+        var linkageOptions = new DataflowLinkOptions { PropagateCompletion = true };
+        var executionOptions = new ExecutionDataflowBlockOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            SingleProducerConstrained = true,
+        };
 
-        // Instantiate the individual pipe pieces
-        // --------------------------------------
         extractImagesFromWebsite = new TransformBlock<RequestInfo, ImageUrlBundle>(Preparation.ExtractMangaImageUrls, executionOptions);
         downloadImages = new TransformBlock<ImageUrlBundle, PathBundle>(Image.StartDownloads, executionOptions);
         mergeToPdf = new ActionBlock<PathBundle>(Pdf.GenerateNew, executionOptions);
 
-        // Then connect them together
-        // --------------------------
+        // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        // ┃ Connect pipeline pieces together ┃
+        // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+        
         extractImagesFromWebsite.LinkTo(downloadImages, linkageOptions);
         downloadImages.LinkTo(mergeToPdf, linkageOptions);
     }

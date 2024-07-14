@@ -1,109 +1,120 @@
 using ExtensionMethods;
 using HtmlAgilityPack;
 using Optional;
-using Optional.Collections;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
-public static class Preparation
+public static partial class Preparation
 {
-    private class RequiredWebData
+    private record class RequiredWebData(string ClassAttribute, string ImageLink);
+
+    [GeneratedRegex(@"https://([a-z0-9-]+\.){1,}([a-z0-9]+/)[^,'\n]+")]
+    private static partial Regex MangaImageUrlRegex();
+
+    private static Option<IEnumerable<RequiredWebData>> ImgNodeToRequired(HtmlNode img)
     {
-        public string ClassAttribute { get; init; } = null!;
-        public string ImageLink { get; init; } = null!;
+        string link = img.GetAttributeValue("data-src", img.GetAttributeValue("src", String.Empty));
+
+        if (link.IsNonEmpty())
+        {
+            Match regexResult = MangaImageUrlRegex().Match(link);
+
+            if (regexResult.Success)
+            {
+                Option<string> classAttribute = img.GetClassesOfFirstParentDiv();
+
+                if (classAttribute.HasValue)
+                {
+                    return new RequiredWebData(
+                        ClassAttribute: classAttribute.Unwrap(), 
+                        ImageLink: link
+                    )
+                    .Yield()
+                    .Some();
+                }
+            }
+        }
+
+        return Option.None<IEnumerable<RequiredWebData>>();
+    }
+
+    private static Option<IEnumerable<RequiredWebData>> ScriptNodeToRequired(HtmlNode script)
+    {
+        if (script.InnerText.IsNonEmpty())
+        {
+            string content = script.InnerText.Trim();
+            MatchCollection regexResult = MangaImageUrlRegex().Matches(content);
+
+            if (regexResult.Count > 0)
+            {
+                Option<string> classAttribute = script.GetClassesOfFirstParentDiv();
+
+                if (classAttribute.HasValue)
+                {
+                    return regexResult
+                        .Select(match =>
+                        {
+                            return new RequiredWebData(
+                                ClassAttribute: classAttribute.Unwrap(),
+                                ImageLink: match.Value
+                            );
+                        })
+                        .Some();
+                }
+            }
+        }
+
+        return Option.None<IEnumerable<RequiredWebData>>();
+    }
+
+    private static Option<IEnumerable<RequiredWebData>> HtmlNodeToRequired(HtmlNode node)
+    {
+        return node.OriginalName switch
+        {
+            "img" => ImgNodeToRequired(node),
+            "script" => ScriptNodeToRequired(node),
+            _ => Option.None<IEnumerable<RequiredWebData>>(),
+        };
+    }
+
+    private static IEnumerable<string> FindImageUrlsOnSite(HtmlNode root)
+    {
+        IEnumerable<RequiredWebData> requiredData = root
+            .DescendantsAndSelf()
+            .Select(node => HtmlNodeToRequired(node))
+            .Where(optRequired => optRequired.HasValue)
+            .SelectMany(optRequired => optRequired.Unwrap());
+
+        if (requiredData.Any())
+        {
+            return requiredData
+                .GroupBy(required => required.ClassAttribute, required => required.ImageLink)
+                .OrderByDescending(group => group.Count())
+                .First()
+                .Select(group => group);
+        }
+
+        return Enumerable.Empty<string>();
     }
 
     public static async Task<ImageUrlBundle> ExtractMangaImageUrls(RequestInfo requestInfo)
     {
         var scraper = new HtmlWeb();
         HtmlDocument website = await scraper.LoadFromWebAsync(requestInfo.Url);
+        IEnumerable<string> foundUrls = FindImageUrlsOnSite(website.DocumentNode);
 
-        List<HtmlNode> scriptNodes = website
-            .DocumentNode
-            .DescendantsAndSelf()
-            .Where(node => node.OriginalName.Equals("script") && node.InnerText.Trim().Equals(String.Empty) == false)
-            .ToList();
-
-        /*Console.WriteLine($"Found {scriptNodes.Count} non-empty scripts.");
-
-        foreach (var node in scriptNodes)
+        if (foundUrls.Any())
         {
-            Console.WriteLine(node.InnerText);
-            Console.WriteLine("===================================================================");
-        }*/
-
-        string pattern = @"https:\/\/([a-zA-Z0-9]*\.)?([a-zA-Z0-9]*\.)[a-zA-Z]*[a-zA-Z0-9_\-\.\/\?\=\&]*";
-        string pattern2 = @"(?<=\/)\d+(?=[a-z-_.]*$)|(?<=\/[a-z]*)\d+(?=\.)";
-        var regex = new Regex(pattern, RegexOptions.Compiled);
-
-        List<MatchCollection> foundUrls = scriptNodes
-            .Where(node => regex.IsMatch(node.InnerText.Trim()))
-            .Select(node => regex.Matches(node.InnerText.Trim()))
-            .ToList();
-
-        Option<MatchCollection> imageLinks = OptionExtensions.SomeNotNull(foundUrls.MaxBy(match => match.Count));
-
-        if (imageLinks.HasValue)
-        {
-            return new ImageUrlBundle { Metadata = requestInfo, Images = imageLinks.Unwrap().Select(match => match.Value).Some(), };
+            return new ImageUrlBundle { Metadata = requestInfo, Images = foundUrls };
         }
 
-        /*
-
-        List<HtmlNode> imageNodes = website
-            .DocumentNode
-            .DescendantsAndSelf()
-            .Where(node => node.OriginalName.Equals("img"))
-            .ToList();
-
-        if (imageNodes.Any())
-        {
-            IEnumerable<RequiredWebData> imageNodesWithValidUrl = imageNodes
-                .Select(node => Preparation.LinkValidator(node))
-                .Where(data => data.HasValue)
-                .Select(data => data.Unwrap());
-            
-            Dictionary<string, List<string>> groupedImageLinks = imageNodesWithValidUrl
-                .GroupBy(data => data.ClassAttribute, data => data.ImageLink, (key, group) => new
-                {
-                    Key = key,
-                    Value = group.ToList(),
-                })
-                .ToDictionary(group => group.Key, group => group.Value);
-            
-            Option<IEnumerable<string>> imageLinks = groupedImageLinks
-                .Values
-                .OrderByDescending(list => list.Count)
-                .Select(list => list.AsEnumerable())
-                .FirstOrNone();
-
-            return new ImageUrlBundle { Metadata = requestInfo, Images = imageLinks, };
-        }*/
-
-        return new ImageUrlBundle { Metadata = requestInfo, Images = Option.None<IEnumerable<string>>(), };
-    }
-
-    private static Option<RequiredWebData> LinkValidator(HtmlNode node)
-    {
-        Option<string> imageLink = OptionExtensions.SomeNotNull(node.GetAttributeValue("data-src", null) ?? node.GetAttributeValue("src", null));
-        Option<string> classAttribute = node
-            .Ancestors()
-            .Where(node => node.OriginalName.Equals("div"))
-            .Select(div => div.GetClasses().Flatten())
-            .FirstOrNone();
-
-        if (imageLink.HasValue && classAttribute.HasValue && Uri.IsWellFormedUriString(imageLink.Unwrap(), UriKind.Absolute))
-        {
-            return Option.Some(new RequiredWebData
-            {
-                ClassAttribute = classAttribute.Unwrap().Trim(),
-                ImageLink = imageLink.Unwrap().Trim(),
-            });
-        }
-
-        return Option.None<RequiredWebData>();
+        Program.LogFailedProcess(requestInfo, "The provided website does not contain any images.", "Please check the website URL or try a different site.");
+        
+        Debug.Fail("PANIC", "Reached unreachable code.");
+        return new ImageUrlBundle();
     }
 }

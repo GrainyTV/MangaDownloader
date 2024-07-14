@@ -1,10 +1,9 @@
-using Optional;
 using System.Collections.Generic;
 
 public class ImageUrlBundle
 {
     public RequestInfo Metadata { get; init; } = null!;
-    public Option<IEnumerable<string>> Images { get; init; }
+    public IEnumerable<string> Images { get; init; } = null!;
 }
 
 public class PathBundle

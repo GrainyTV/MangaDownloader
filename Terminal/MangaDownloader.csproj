@@ -6,6 +6,8 @@
         <OutputType>Exe</OutputType>
         <PublishAot>true</PublishAot>
         <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+        <PublishDir>out</PublishDir>
+        <PublishRelease>false</PublishRelease>
         <TrimMode>partial</TrimMode>
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>

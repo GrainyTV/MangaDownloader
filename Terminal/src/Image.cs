@@ -1,11 +1,8 @@
-using ExtensionMethods;
-using Optional;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
 
 public static class Image
 {
@@ -13,12 +10,7 @@ public static class Image
 
     public static PathBundle StartDownloads(ImageUrlBundle imageUrlBundle)
     {
-        if (imageUrlBundle.Images.HasValue == false)
-        {
-            return new PathBundle { Metadata = imageUrlBundle.Metadata, Paths = Enumerable.Empty<string>().ToList(), };
-        }
-
-        IEnumerable<string> images = imageUrlBundle.Images.Unwrap();
+        IEnumerable<string> images = imageUrlBundle.Images;
         RequestInfo requestInfo = imageUrlBundle.Metadata;
         string title = requestInfo.Title;
         int chapter = requestInfo.Id;
@@ -33,7 +25,7 @@ public static class Image
                 string savePath = $"{title}/{chapter}/{page}";
 
                 var baseAddress = new Uri(requestInfo.Url);
-                var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
                 httpRequestMessage.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:x.x.x) Gecko/20041107 Firefox/x.x");
                 httpRequestMessage.Headers.Add("Referer", baseAddress.GetLeftPart(UriPartial.Authority));
 
