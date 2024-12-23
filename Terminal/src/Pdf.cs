@@ -13,7 +13,7 @@ public static class Pdf
         List<string> images = pathBundle.Paths;
         RequestInfo requestInfo = pathBundle.Metadata;
         string title = requestInfo.Title;
-        int chapter = requestInfo.Id;
+        string chapter = requestInfo.UniqueId;
 
         using var document = new PdfDocument();
         document.AddPages(images.Count);

@@ -5,7 +5,9 @@ using Optional.Unsafe;
 using PdfSharp.Pdf;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace ExtensionMethods;
 

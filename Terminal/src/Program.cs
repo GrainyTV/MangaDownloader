@@ -6,6 +6,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using System.IO;
+using System.Diagnostics;
 
 static class Program
 {
@@ -18,9 +19,11 @@ static class Program
     // ┃ args[2] = Chapter Number                 ┃
     // ┃ args[3] = Optional<Final Chapter Number> ┃
     // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-    
+
     private static void Main(string[] args)
     {
+        Debug.Assert(ErrorMessages.IsProperlyFilled);
+
         Action application = args.Length switch
         {
             SingleChapter => () => CreateChapters(args[0], args[1], args[2], args[2]),
@@ -40,13 +43,14 @@ static class Program
         IEnumerable<Int32> chapters = Enumerable.Range(firstChapterAsInt, chapterCount);
         var creationProcess = new PipeLine();
         string processStartedAt = DateTime.Now.ToString("s");
+        Int32 digits = finalChapterAsInt.ToString().Length;
 
         chapters.ForEach(chapter =>
         {
             var userInput = new RequestInfo
             {
                 Time = processStartedAt,
-                Id = chapter,
+                UniqueId = chapter.ToString($"D{digits}"),
                 CancellationSource = new System.Threading.CancellationTokenSource(),
                 Title = title,
                 Url = chapterCount == 1 ? url : String.Format(url, chapter),
@@ -62,22 +66,5 @@ static class Program
         Helpers.WriteLineColor(Color.DarkOrange, "[WARNING]", "Your command line arguments are not properly formatted.");
         Helpers.WriteLineColor(Color.DarkOrange, """ - use "./{Executable} {Title} {Url} {Chapter}" for a single chapter""");
         Helpers.WriteLineColor(Color.DarkOrange, """ - use "./{Executable} {Title} {Url} {FirstChapter} {FinalChapter}" for multiple chapters""");
-    }
-
-    public static void LogFailedProcess(RequestInfo requestInfo, string causeMsg, string suggestionMsg)
-    {
-        CancellationTokenSource source = requestInfo.CancellationSource;
-        source.Cancel();
-
-        using (StreamWriter logFile = new StreamWriter(path: $"logfile-{requestInfo.Time}.log", append: true))
-        {
-            logFile.WriteLine("[ERROR]");
-            logFile.WriteLine($"Cause: {causeMsg}");
-            logFile.WriteLine($"Suggestion: {suggestionMsg}");
-            logFile.WriteLine(requestInfo.ToString());
-            logFile.WriteLine();
-        }
-
-        source.Token.ThrowIfCancellationRequested();
     }
 }

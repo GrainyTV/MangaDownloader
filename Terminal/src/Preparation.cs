@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Net.Http;
 
 public static partial class Preparation
 {
@@ -104,17 +105,28 @@ public static partial class Preparation
     public static async Task<ImageUrlBundle> ExtractMangaImageUrls(RequestInfo requestInfo)
     {
         var scraper = new HtmlWeb();
-        HtmlDocument website = await scraper.LoadFromWebAsync(requestInfo.Url);
-        IEnumerable<string> foundUrls = FindImageUrlsOnSite(website.DocumentNode);
+        var optWebsite = Option.None<HtmlDocument>();
+
+        try
+        {
+            HtmlDocument content = await scraper.LoadFromWebAsync(requestInfo.Url);
+            optWebsite = content.Some();
+        }
+        catch (HttpRequestException)
+        {
+            ErrorMessages.LogFailedProcess(requestInfo, ErrorValue.NetworkFailure);
+        }
+        
+        IEnumerable<string> foundUrls = optWebsite
+            .Map(website => FindImageUrlsOnSite(website.DocumentNode))
+            .Unwrap();
 
         if (foundUrls.Any())
         {
             return new ImageUrlBundle { Metadata = requestInfo, Images = foundUrls };
         }
 
-        Program.LogFailedProcess(requestInfo, "The provided website does not contain any images.", "Please check the website URL or try a different site.");
-        
-        Debug.Fail("PANIC", "Reached unreachable code.");
-        return new ImageUrlBundle();
+        ErrorMessages.LogFailedProcess(requestInfo, ErrorValue.NoImageResourceFound);
+        throw new UnreachableException();
     }
 }

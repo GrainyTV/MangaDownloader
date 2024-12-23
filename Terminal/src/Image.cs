@@ -13,31 +13,31 @@ public static class Image
         IEnumerable<string> images = imageUrlBundle.Images;
         RequestInfo requestInfo = imageUrlBundle.Metadata;
         string title = requestInfo.Title;
-        int chapter = requestInfo.Id;
-        
-        Directory.CreateDirectory(title);
-        Directory.CreateDirectory($"{title}/{chapter}");
+        string chapter = requestInfo.UniqueId;
 
+        Directory.CreateDirectory($"{title}/{chapter}");
         List<string> imagePaths = images
             .AsParallel()
-            .Select(async (url, page) =>
+            .Select(async (imageUrl, page) =>
             {
-                string savePath = $"{title}/{chapter}/{page}";
-
                 var baseAddress = new Uri(requestInfo.Url);
-                using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                string savePath = $"{title}/{chapter}/{page}";
+                
+                using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                 httpRequestMessage.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:x.x.x) Gecko/20041107 Firefox/x.x");
                 httpRequestMessage.Headers.Add("Referer", baseAddress.GetLeftPart(UriPartial.Authority));
 
                 using HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage);
-                using var fileStream = new FileStream(savePath, FileMode.OpenOrCreate);
 
-                response.EnsureSuccessStatusCode();
-                await response.Content.CopyToAsync(fileStream);
+                if (response.IsSuccessStatusCode)
+                {
+                    using var fileStream = new FileStream(savePath, FileMode.CreateNew);
+                    await response.Content.CopyToAsync(fileStream);
+                }
 
                 return savePath;
             })
-            .Select(path => path.Result)
+            .Select(task => task.Result)
             .ToList();
 
         return new PathBundle { Metadata = requestInfo, Paths = imagePaths, };
