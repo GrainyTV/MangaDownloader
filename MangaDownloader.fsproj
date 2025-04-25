@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <PublishAot>true</PublishAot>
+    <PublishDir>$(MSBuildProjectName)</PublishDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src/frontend/ObjectInitHelper.fs" />
+    <Compile Include="src/frontend/Fonts.fs" />
+    <Compile Include="src/frontend/Styles.fs" />
+    <Compile Include="src/frontend/FloatingActionButton.fs" />
+    <Compile Include="src/frontend/DataProviderPanel.fs" />
+    <Compile Include="src/frontend/DefaultWindow.fs" />
+    <Compile Include="src/frontend/Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.1.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.1.3" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="11.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="assets/font/*.otf" />
+  </ItemGroup>
+
+</Project>
