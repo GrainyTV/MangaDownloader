@@ -1,6 +1,17 @@
 # Manga Downloader
 
-The concept of this application is to make reading manga more convenient and easily accessible for anyone. Currently the largest online platform that I know of for reading fan translations is MangaDex. Now the site is still in a legal gray area for copyright, but it has been available for a while. The problem is reading manga straight from a website is not the best experience, especially on mobile devices. The core idea is to create locally available PDF files using the site's API. Then you can read them with your preferred PDF reader application on pretty much any device without needing an internet connection. You can also future-preserve the content as an added bonus.
+Blazingly fast and easy-to-use manga downloader application using the [MangaDex](https://api.mangadex.org) API with a graphical user interface.
 
-> This is the 4th (and possibly final) iteration of the application. It was originally a Java console application. Later it was ported to C# because I felt like it was easier to achieve high performance. Then a graphical user interface was made in Flutter. Now it lives as a fully F#-developed application for the sake of simplicity instead of having two different languages.
+## Context and Motivation
 
+Originally I made this application to entertain myself during boring classes, but I figured it might be useful for others as well, so I decided to make a polished version that even non-tech-savvy people can use. Currently, the biggest online platform I know for reading fan translations is MangaDex, but it has its issues. For one, reading manga straight from a website is not the best experience, especially on limited screen space devices like mobile phones. Plus, the site operates in a bit of a legal gray area regarding copyright. The core idea is to create locally available PDF files that you can read with your preferred choice of application on pretty much any device without even needing an internet connection. You can also future-preserve the content as an added bonus in case a DMCA takedown happens.
+
+> This is the 4th (and possibly final) iteration of the application. It was originally a Java console application. Later it was ported to C#. Then I made a GUI in Flutter. Now both the backend and the frontend uses F#.
+
+## Building from Source
+
+Install the latest .NET8 version. Then run the following command:
+```
+dotnet publish -c Release
+```  
+This will compile a native executable for your platform and place it inside a folder called `MangaDownloader` in the root of the cloned the repository.

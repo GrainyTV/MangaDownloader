@@ -33,14 +33,14 @@ let private initMainArea () : Panel =
     interactiveArea.RowDefinitions.Add(RowDefinition(4, GridUnitType.Star))
     interactiveArea.RowDefinitions.Add(RowDefinition(1, GridUnitType.Star))
 
-    let centerCell = DataProviderPanel("Title", "Enter a title for your manga.")
-    centerCell.IsVisible <- false
-    interactiveArea.Children.Add(centerCell)
+    let centerCell = DataProviderPanel()
+    centerCell.Show(false)
+    interactiveArea.Children.Add(centerCell.Layout)
 
-    Grid.SetColumn(centerCell, 1)
-    Grid.SetRow(centerCell, 1)
+    Grid.SetColumn(centerCell.Layout, 1)
+    Grid.SetRow(centerCell.Layout, 1)
 
-    let createNewButton = FloatingActionButton (56, "New", fun _ -> centerCell.IsVisible <- true)
+    let createNewButton = FloatingActionButton (56, "New", fun _ -> centerCell.Show(true))
 
     let mainArea = Panel()
     mainArea.Children.Add(backgroundImage)
