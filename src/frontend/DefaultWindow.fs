@@ -5,48 +5,58 @@ open Avalonia.Controls
 open Avalonia.Layout
 open Avalonia.Media
 open Avalonia.Media.Imaging
+open Avalonia.Platform
 open ObjectInitHelper
 open DataProviderPanel
 open FloatingActionButton
 open System
 
-let private initGlobalArea (top: Panel) (bottom: Panel) : DockPanel =
-    let globalArea = DockPanel()
-    globalArea.LastChildFill <- true
-    globalArea.Children.Add(top)
-    globalArea.Children.Add(bottom)
-    globalArea
+let private initUserArea (backgroundImage: Image) : Panel =
+    let wizard = DataProviderPanel()
+    wizard.Show(false)
 
-let private initMainArea () : Panel =
-    let backgroundImage = Image()
-    backgroundImage.Source <- new Bitmap("assets/img/starry-night-sky.jpg")
-    backgroundImage.Stretch <- Stretch.UniformToFill
-
-    let interactiveArea = Grid()
-    interactiveArea.ShowGridLines <- true
+    let interactiveArea = Grid(ShowGridLines = true)
     
-    interactiveArea.ColumnDefinitions.Add(ColumnDefinition(3, GridUnitType.Star))
-    interactiveArea.ColumnDefinitions.Add(ColumnDefinition(2.25, GridUnitType.Star))
-    interactiveArea.ColumnDefinitions.Add(ColumnDefinition(3, GridUnitType.Star))
+    interactiveArea.ColumnDefinitions.AddRange [
+        ColumnDefinition(3, GridUnitType.Star)
+        ColumnDefinition(2.25, GridUnitType.Star)
+        ColumnDefinition(3, GridUnitType.Star)
+    ]
     
-    interactiveArea.RowDefinitions.Add(RowDefinition(1, GridUnitType.Star))
-    interactiveArea.RowDefinitions.Add(RowDefinition(4, GridUnitType.Star))
-    interactiveArea.RowDefinitions.Add(RowDefinition(1, GridUnitType.Star))
+    interactiveArea.RowDefinitions.AddRange [
+        RowDefinition(1, GridUnitType.Star)
+        RowDefinition(4, GridUnitType.Star)
+        RowDefinition(1, GridUnitType.Star)
+    ]
+    
+    interactiveArea.Children.Add(wizard.Layout)
 
-    let centerCell = DataProviderPanel()
-    centerCell.Show(false)
-    interactiveArea.Children.Add(centerCell.Layout)
+    //   Wizard should be the middle cell
+    //
+    //     0   1   2
+    //   #---#---#---#
+    // 0 | x | x | x |
+    //   #---#---#---#
+    // 1 | x | O | x |
+    //   #---#---#---#
+    // 2 | x | x | x |
+    //   #---#---#---#
+    //
 
-    Grid.SetColumn(centerCell.Layout, 1)
-    Grid.SetRow(centerCell.Layout, 1)
+    Grid.SetColumn(wizard.Layout, 1)
+    Grid.SetRow(wizard.Layout, 1)
 
-    let createNewButton = FloatingActionButton (56, "New", fun _ -> centerCell.Show(true))
+    let createNewButton = FloatingActionButton (56, "New", fun _ -> wizard.Show(true))
 
-    let mainArea = Panel()
-    mainArea.Children.Add(backgroundImage)
-    mainArea.Children.Add(interactiveArea)
-    mainArea.Children.Add(createNewButton)
-    mainArea
+    let control = Panel()
+    
+    control.Children.AddRange [
+        backgroundImage
+        interactiveArea
+        createNewButton
+    ]
+    
+    control
 
 let private initAppBar (titleText: string) : Panel =
     let title = Text.from titleText
@@ -61,25 +71,26 @@ let private initAppBar (titleText: string) : Panel =
     appBar.Children.Add(title)
     appBar
 
-type DefaultWindow(targetWidth: float, targetHeight: float, titleText: string) as window =
-    inherit Window()
+type DefaultWindow(targetWidth: float, targetHeight: float, title: string) =
+    let backgroundImage = Image(
+        Stretch = Stretch.UniformToFill,
+        Source = new Bitmap(AssetLoader.Open(Uri("resm:MangaDownloader.assets.img.starry-night-sky.jpg"))))
 
-    let appBar = initAppBar titleText
-    let mainArea = initMainArea ()
-    let globalArea = initGlobalArea appBar mainArea
+    let appBar = initAppBar (title)
+    let userArea = initUserArea (backgroundImage)
+    let globalContainer = DockPanel(LastChildFill = true)
+
+    let baseControl = Window(
+        Title = title,
+        Width = targetWidth,
+        Height = targetHeight,
+        MinWidth = targetWidth,
+        MinHeight = targetHeight,
+        WindowStartupLocation = WindowStartupLocation.CenterScreen,
+        Content = globalContainer)
 
     do
+        globalContainer.Children.AddRange [ appBar; userArea ]
         DockPanel.SetDock(appBar, Dock.Top)
 
-        window.Title <- titleText
-        
-        window.Width <- targetWidth
-        window.MinWidth <- targetWidth
-        
-        window.Height <- targetHeight
-        window.MinHeight <- targetHeight
-        
-        window.WindowStartupLocation <- WindowStartupLocation.CenterScreen
-        window.Content <- globalArea
-        
-        window.Show()
+    member self.Layout = baseControl

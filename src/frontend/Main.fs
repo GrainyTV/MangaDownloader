@@ -2,19 +2,35 @@
 
 open Avalonia
 open Avalonia.Controls
+open Avalonia.Controls.ApplicationLifetimes
 open System
+open System.Diagnostics
 
-let private appMain (app: Application) (_: array<string>) : Unit =
-    app.Styles.Add(Styles.MaterialLike())
-    app.RequestedThemeVariant <- Styling.ThemeVariant.Default
-    app.Run(DefaultWindow.DefaultWindow(960, 540, "Manga Downloader"))
+type MyApp() =
+    inherit Application()
+
+    override self.OnFrameworkInitializationCompleted () : Unit =
+        match self.ApplicationLifetime with
+        | :? IClassicDesktopStyleApplicationLifetime as desktop ->
+            self.Styles.Add(Styles.MaterialLike())
+
+            let window = DefaultWindow.DefaultWindow(960, 540, "Manga Downloader")
+            desktop.MainWindow <- window.Layout
+            desktop.MainWindow.Show()
+
+        | _ -> raise (UnreachableException("Application should have been started as ClassicDesktopStyle"))
+
+        base.OnFrameworkInitializationCompleted()
 
 [<EntryPoint;STAThread>]
 let main (args: array<string>) : int =
-    AppBuilder
-        .Configure()
-        .ConfigureFonts(Fonts.registerCustom)
-        .UsePlatformDetect()
-        .Start(appMain, args)
+    Trace.Listeners.Add(new TextWriterTraceListener(Console.Out)) |> ignore
+    Trace.AutoFlush <- true
 
-    0
+    AppBuilder
+        .Configure<MyApp>()
+        .ConfigureFonts(Fonts.registerCustom)
+        .With(X11PlatformOptions(RenderingMode = [ X11RenderingMode.Software ]))
+        .UsePlatformDetect()
+        .LogToTrace()
+        .StartWithClassicDesktopLifetime(args)

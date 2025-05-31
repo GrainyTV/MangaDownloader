@@ -2,6 +2,7 @@ module ObjectInitHelper
 
 open Avalonia.Controls
 open Avalonia.Media
+open Avalonia
 
 [<AbstractClass; Sealed>]
 type Color private () =
@@ -10,7 +11,4 @@ type Color private () =
 
 [<AbstractClass; Sealed>]
 type Text private () =
-    static member from(text: string) : TextBlock =
-        let tb = TextBlock()
-        tb.Text <- text
-        tb
+    static member from(text: string) = TextBlock(Text = text)
