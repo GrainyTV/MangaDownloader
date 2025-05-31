@@ -14,7 +14,7 @@ let private THEME_COLOR = 0xff152238
 
 let private textStyle () : Style =
     let textStyle = Style(fun elem -> elem.OfType<TextBlock>())
-    textStyle.Setters.Add(Setter(TextBlock.FontFamilyProperty, FontFamily(ARGENTUM_SANS)))
+    textStyle.Setters.Add(Setter(TextBlock.FontFamilyProperty, FontFamily(Fonts.ARGENTUM_SANS)))
     textStyle.Setters.Add(Setter(TextBlock.ForegroundProperty, Color.from(Colors.White)))
     textStyle.Setters.Add(Setter(TextBlock.FontSizeProperty, 20.0))
     textStyle.Setters.Add(Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Center))
@@ -31,7 +31,7 @@ type MaterialLike() as theme =
     inherit SimpleTheme()
 
     do
-        theme.AddRange([|
+        theme.AddRange [
             textStyle()
             buttonStyle()
-        |])
+        ]

@@ -10,8 +10,8 @@ Originally I made this application to entertain myself during boring classes, bu
 
 ## Building from Source
 
-Install the latest .NET8 version. Then run the following command:
+The application uses AOT compilation so you need to install a few prerequisites, namely: `clang` and `zlib-devel`. Then if you have `.NET8` on your system, you can run the following command:
 ```
 dotnet publish -c Release
 ```  
-This will compile a native executable for your platform and place it inside a folder called `MangaDownloader` in the root of the cloned the repository.
+This will compile the native executable for your platform and place it inside a folder called `MangaDownloader` in the root of the cloned the repository.

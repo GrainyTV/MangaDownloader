@@ -29,8 +29,11 @@ type OperationModeSelector () =
     let baseControl = UniformGrid(Rows = 1, Columns = 2)
     let groupName = "Operation Mode Selector"
 
-    let singleChapterSelect = RadioButton(Content = Text.from ("Single Chapter"), GroupName = groupName)
-    let multiChapterSelect = RadioButton(Content = Text.from ("Multiple Chapters"), GroupName = groupName)
+    let singleChapterSelectText = Text.from("Single\nChapter")
+    let multiChapterSelectText = Text.from("Multiple\nChapters")
+
+    let singleChapterSelect = RadioButton(Content = singleChapterSelectText, GroupName = groupName, IsChecked = true, Background = Color.from (Colors.AliceBlue))
+    let multiChapterSelect = RadioButton(Content = multiChapterSelectText, GroupName = groupName, Background = Color.from (Colors.Red))
 
     let mutable selectedMode = OpMode.SingleChapter
 
@@ -39,13 +42,15 @@ type OperationModeSelector () =
             selectedMode <- selected
 
     do
+        singleChapterSelectText.Margin <- Thickness(0,10)
+        singleChapterSelectText.HorizontalAlignment <- HorizontalAlignment.Left
+        multiChapterSelectText.HorizontalAlignment <- HorizontalAlignment.Left
+
         singleChapterSelect.IsCheckedChanged.Add(fun _ -> checkButtonState (singleChapterSelect) (OpMode.SingleChapter))
         multiChapterSelect.IsCheckedChanged.Add(fun _ -> checkButtonState (multiChapterSelect) (OpMode.MultiChapters))
-
-        singleChapterSelect.IsChecked <- true // Have single chapter as the default one
         
         baseControl.Children.AddRange [ singleChapterSelect; multiChapterSelect ]
-
+        
     member self.Layout = baseControl
     member self.SelectedMode = selectedMode
 
@@ -78,8 +83,8 @@ type StackLayout() =
 
     member private self.RefreshLayout() : Unit =
         baseControl.Children[0] <- Text.from (configSteps[selectedConfigStep].Header)
-        baseControl.Children[1] <- configSteps[selectedConfigStep].Action
-        baseControl.Children[2] <- Text.from (configSteps[selectedConfigStep].Description)      
+        baseControl.Children[1] <- Viewbox(Child = configSteps[selectedConfigStep].Action)
+        baseControl.Children[2] <- Viewbox(Child = Text.from (configSteps[selectedConfigStep].Description))
 
     member self.Proceed() : Unit =
         match selectedConfigStep with
