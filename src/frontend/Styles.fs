@@ -12,6 +12,15 @@ open Fonts
 [<Literal>]
 let private THEME_COLOR = 0xff152238
 
+[<Literal>]
+let OFF_WHITE = 0xfff2f0ef
+
+[<Literal>]
+let LIGHT_BLUE = 0xff384b69
+
+[<Literal>]
+let LIGHT_BLUE2 = 0xe6384b69
+
 let private textStyle () : Style =
     let textStyle = Style(fun elem -> elem.OfType<TextBlock>())
     textStyle.Setters.Add(Setter(TextBlock.FontFamilyProperty, FontFamily(Fonts.ARGENTUM_SANS)))

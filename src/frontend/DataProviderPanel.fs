@@ -7,6 +7,7 @@ open Avalonia.Layout
 open Avalonia.Media
 open ObjectInitHelper
 open System
+open System.Diagnostics
 
 type OpMode =
     | SingleChapter
@@ -73,11 +74,11 @@ type StackLayout() =
     let request = Program.UserRequest()
 
     do
-        baseControl.Children.AddRange [
-            Text.from (configSteps[selectedConfigStep].Header)
+        baseControl.Children.AddRange [|
+            Widgets.DynamicText (Text.from configSteps[selectedConfigStep].Header, 0.125)
             configSteps[selectedConfigStep].Action
-            Text.from (configSteps[selectedConfigStep].Description)
-        ]
+            Widgets.DynamicText (Text.from configSteps[selectedConfigStep].Description, 0.060)
+        |]
 
     member self.Layout = baseControl
 
@@ -114,29 +115,51 @@ type StackLayout() =
 
 type DataProviderPanel() =
     let baseControl = Grid()
+    let baseControlCornered = Border(
+        IsVisible = false,
+        CornerRadius = CornerRadius(16),
+        Background = Color.from (Styles.LIGHT_BLUE2),
+        BorderThickness = Thickness(2),
+        BorderBrush = Color.from(Styles.OFF_WHITE),
+        Child = baseControl)
+
     let actionArea = StackLayout ()
-    let proceedButton = Button(Content = Text.from ("Next"))
+    
+    let proceedButtonText = Widgets.DynamicText(Text.from "Next", 0.175)
+    let proceedButton = Button(Content = proceedButtonText)
+    let shitCtr = Widgets.PercentageContainer (proceedButton, "33.334%", "50%")
 
     do
         baseControl.ColumnDefinitions.Add(ColumnDefinition(1, GridUnitType.Star))
-        baseControl.RowDefinitions.AddRange [
+        baseControl.RowDefinitions.AddRange [|
             RowDefinition(1, GridUnitType.Star)
             RowDefinition(3, GridUnitType.Star)
             RowDefinition(1, GridUnitType.Star)
             RowDefinition(1, GridUnitType.Star)
-        ]
+        |]
 
         baseControl.Children.Add(actionArea.Layout)
         Grid.SetRow(actionArea.Layout, 1)
 
-        baseControl.Children.Add(proceedButton)
-        Grid.SetRow(proceedButton, 3)
+        //baseControl.Children.Add(proceedButton)
+        //Grid.SetRow(proceedButton, 3)
+
+        //let shitCtr = PercentageContainer(proceedButton, 0.3334, 0.5)
+        //baseControl.Children.Add(shitCtr.Layout)
+        //Grid.SetRow(shitCtr.Layout, 3)
+
+        //let shitCtr = Widgets.PercentageContainer (proceedButton, "33.334%", "50%")
+        baseControl.Children.Add(shitCtr)
+        Grid.SetRow(shitCtr, 3)
 
         proceedButton.Click.Add(fun _ -> actionArea.Proceed())
+        // proceedButton.SizeChanged.Add(fun _ -> 
+        // proceedButton.CornerRadius <- CornerRadius(proceedButton.Bounds.Width * 0.1))
+        // proceedButtonText.FontSize <- proceedButton.Bounds.Width * 0.175)
 
-    member self.Layout = baseControl
+    member self.Layout = baseControlCornered
 
     member self.Show(yesOrNo: bool) : Unit =
         match yesOrNo with
-        | true -> baseControl.IsVisible <- true
-        | false -> baseControl.IsVisible <- false
+        | true -> baseControlCornered.IsVisible <- true
+        | false -> baseControlCornered.IsVisible <- false
