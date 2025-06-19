@@ -4,7 +4,10 @@
     <Platform Condition="$([System.OperatingSystem]::IsWindows())">Win32</Platform>
     <Platform Condition="$([System.OperatingSystem]::IsMacOS())">macOS</Platform>
     <Platform Condition="$([System.OperatingSystem]::IsLinux())">Linux</Platform>
-    <LibDir>lib/$(RuntimeIdentifier)</LibDir>
+  </PropertyGroup>
+
+  <PropertyGroup> <!-- Small hack for the LSP -->
+    <RuntimeIdentifier Condition="'$(DesignTimeBuild)' == 'True'">linux-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -36,31 +39,32 @@
     <Compile Include="src/frontend/ObjectInitHelper.fs" />
     <Compile Include="src/frontend/Fonts.fs" />
     <Compile Include="src/frontend/Styles.fs" />
+    <Compile Include="src/frontend/Widgets.fs" />
     <Compile Include="src/frontend/FloatingActionButton.fs" />
     <Compile Include="src/frontend/DataProviderPanel.fs" />
     <Compile Include="src/frontend/DefaultWindow.fs" />
     <Compile Include="src/frontend/Main.fs" />
   </ItemGroup>
 
-  <ItemGroup> <!-- Static Libraries -->
-    <DirectPInvoke Include="libHarfBuzzSharp" />
-    <NativeLibrary Include="$(LibDir)/libHarfBuzzSharp.a" />
-    <DirectPInvoke Include="libskia" />
-    <NativeLibrary Include="$(LibDir)/libskia.a" />
-    <DirectPInvoke Include="libSkiaSharp" />
-    <NativeLibrary Include="$(LibDir)/libSkiaSharp.a" />
-    <LinkerArg Include="-Wl,-l:libstdc++.a" />
-  </ItemGroup>
+  <Target Name="HandleLibraries" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <LibDir>lib/$(RuntimeIdentifier)</LibDir>
+      <SupportedRIDs>win-x64;linux-x64</SupportedRIDs>
+    </PropertyGroup>
 
-  <ItemGroup> <!-- Skip Dynamic Libraries -->
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.$(Platform)" Version="7.3.0.2" >
-      <ExcludeAssets>native</ExcludeAssets>
-    </PackageReference>
-    
-    <PackageReference Include="SkiaSharp.NativeAssets.$(Platform)" Version="2.88.8" >
-      <ExcludeAssets>native</ExcludeAssets>
-    </PackageReference>
-  </ItemGroup>
+    <Error Condition="'$(RuntimeIdentifier)' == ''" Text="You must specify a valid RID using the -r|--runtime flag to compile this project." />
+    <Error Condition="!$(SupportedRIDs.Contains($(RuntimeIdentifier)))" Text="Unsupported RID encountered: '$(RuntimeIdentifier)'. Check the documentation on what is supported." />
+
+    <ItemGroup> <!-- Static libraries to link with -->
+      <DirectPInvoke Include="libHarfBuzzSharp" />
+      <NativeLibrary Include="$(LibDir)/libHarfBuzzSharp.a" />
+      <DirectPInvoke Include="libskia" />
+      <NativeLibrary Include="$(LibDir)/libskia.a" />
+      <DirectPInvoke Include="libSkiaSharp" />
+      <NativeLibrary Include="$(LibDir)/libSkiaSharp.a" />
+      <LinkerArg Include="-Wl,-l:libstdc++.a" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup> <!-- Backend Dependencies -->
     <PackageReference Include="FSharp.Data" Version="6.5.0" />
@@ -82,5 +86,15 @@
   <ItemGroup> <!-- Assets -->
     <EmbeddedResource Include="assets/**" />
   </ItemGroup>
+
+    <ItemGroup> <!-- Skip publishing dynamic libraries -->
+      <PackageReference Include="HarfBuzzSharp.NativeAssets.$(Platform)" Version="7.3.0.2" >
+        <ExcludeAssets>native</ExcludeAssets>
+      </PackageReference>
+      
+      <PackageReference Include="SkiaSharp.NativeAssets.$(Platform)" Version="2.88.8" >
+        <ExcludeAssets>native</ExcludeAssets>
+      </PackageReference>
+    </ItemGroup>
 
 </Project>

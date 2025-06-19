@@ -12,10 +12,11 @@ open FloatingActionButton
 open System
 
 let private initUserArea (backgroundImage: Image) : Panel =
-    let wizard = DataProviderPanel()
-    wizard.Show(false)
+    //let wizard = DataProviderPanel()
+    //wizard.Show(false)
 
-    let interactiveArea = Grid(ShowGridLines = true)
+    let interactiveArea = Grid(ShowGridLines = false)
+    //let interactiveAreaCornered = Border(CornerRadius = CornerRadius(16), Child = interactiveArea)
     
     interactiveArea.ColumnDefinitions.AddRange [
         ColumnDefinition(3, GridUnitType.Star)
@@ -29,6 +30,7 @@ let private initUserArea (backgroundImage: Image) : Panel =
         RowDefinition(1, GridUnitType.Star)
     ]
     
+    let wizard = DataProviderPanel()
     interactiveArea.Children.Add(wizard.Layout)
 
     //   Wizard should be the middle cell
