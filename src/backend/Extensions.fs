@@ -1,11 +1,11 @@
 [<AutoOpen>]
 module Extensions
 
-open System.Diagnostics
 open System.IO
 open PdfSharp.Pdf
 
-type Result<'T, 'Error> with
+#nowarn "FS0025"
+type Result<'T, 'TError> with
     member self.IsOk() : bool =
         Result.isOk(self)
 
@@ -13,14 +13,14 @@ type Result<'T, 'Error> with
         not (self.IsOk())
 
     member self.Unwrap() : 'T =
-        match self with
-        | Ok value -> value
-        | Error _ -> raise (UnreachableException("Tried to access value of result in Error state."))
+        assert (self.IsOk ())
+        let (Ok unwrapped) = self
+        unwrapped
 
-type Stream with
-    member self.AsString() : string =
-        use reader = new StreamReader(self)
-        reader.ReadToEnd()
+    member self.UnwrapError() : 'TError =
+        assert (self.IsError ())
+        let (Error error) = self
+        error
 
 type PdfDocument with
     [<TailCall>]

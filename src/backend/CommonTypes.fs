@@ -2,11 +2,26 @@ module CommonTypes
 
 open System
 
-type ChapterEntry(number: int, title: string, leadingZeroCount: int) =
-    member self.Number: int = number
-    member self.TemporaryImageDirectory: string = joinPathsUnix ([ title; string self.Number ])
-    member self.OutFile: string = joinPathsUnix ([ title; String.Format("{0} Chapter {1}.pdf", title, self.Number.ToString($"D{leadingZeroCount}")) ])
+type ImageInfo = {
+    Remote: array<string>
+    Local: array<string>
+}
 
-    member val Id: string = String.Empty with get, set
-    member val RemoteFiles: array<string> = Array.empty with get, set
-    member val LocalFiles: array<string> = Array.empty with get, set
+type Chapter = {
+    Id: string
+    MangadexId: string
+    Number: int
+    ScanlationGroups: seq<string>
+    ImageInfo: ImageInfo
+}
+
+let EMPTY_CHAPTER = {
+    Id = String.Empty
+    MangadexId = String.Empty
+    Number = 0
+    ScanlationGroups = Seq.empty
+    ImageInfo = {
+        Remote = Array.empty
+        Local = Array.empty
+    }
+}

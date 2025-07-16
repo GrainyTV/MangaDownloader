@@ -13,20 +13,10 @@ let joinPathsUnix (entries: seq<string>) : string =
     builder.AppendJoin(UNIX_SEPARATOR, entries)
     builder.ToString ()
 
-let createDirectoryIfNeeded (path: string) : Unit =
-    if Directory.Exists(path) = false then
-        Directory.CreateDirectory(path) |> ignore
-
-//let addLeadingZerosIfNecessary (chapter: int) (total: int) : string =
-//    chapter.ToString($"D{(string total).Length}")
-
-let assembleIntermediateFeedUrl (url: string) (limit: int) : string =
-    let mangaId = Uri(url).Segments[2].TrimEnd('/')
-    String.Format(Mangadex.FEED_ENDPOINT, mangaId, limit)
-
-let calculateLeadingZeros (from: int) : int = (string from).Length
+let assembleFeedUrl (url: string) : string =
+    let mangadexId = Uri(url).Segments[2].TrimEnd('/')
+    String.Format(Mangadex.FEED_ENDPOINT, mangadexId, Mangadex.FEED_BATCHSIZE)
 
 let unpackJsonFromStream (parseFunction: string -> 'T) (inputStream: Stream) : 'T =
-    use stream = inputStream
-    let content = stream.AsString()
-    parseFunction (content)
+    use reader = new StreamReader(inputStream)
+    parseFunction (reader.ReadToEnd())

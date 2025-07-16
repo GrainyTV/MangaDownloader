@@ -49,6 +49,6 @@ let main (args: array<string>) : int =
         .Configure<MyApp>()
         .ConfigureFonts(Fonts.registerCustom)
         .EnableDebugMessages()
-        .WithSoftwareRenderer()
+        //.WithSoftwareRenderer()
         .UsePlatformDetect()
         .StartWithClassicDesktopLifetime(args)

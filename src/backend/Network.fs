@@ -1,111 +1,119 @@
 module Network
-//open Extension
+
 open CommonTypes
 open LinkDotNet.StringBuilder
 open System
 open System.IO
 open System.Net.Http
 open System.Threading.Tasks
+open System.Threading.RateLimiting
 
-let private httpClient = new HttpClient()
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ User-Agent yoinked from latest Thorium Browser ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+[<Literal>]
+let private USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
-let private sendGetRequestAsync (url: string) : Async<Result<Stream, string>> =
-    async {
-        use request = new HttpRequestMessage(HttpMethod.Get, url)
+// ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+// ┃ Ratelimit options populated from API docs                                  ┃
+// ┃ https://api.mangadex.org/docs/2-limitations/#endpoint-specific-rate-limits ┃
+// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+let private ATHOME_RATELIMIT_OPTIONS = FixedWindowRateLimiterOptions (
+    AutoReplenishment = true,
+    PermitLimit = 40,
+    QueueLimit = Int32.MaxValue,
+    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+    Window = TimeSpan.FromMinutes 1
+)
 
-        try
+type NetworkHelper() =
+    let httpClient = new HttpClient()
+
+    do
+        httpClient.DefaultRequestHeaders.Add("User-Agent", USER_AGENT)
+
+    member self.sendGetRequestAsync (url: string) : Async<Stream> =
+        async {
+            use request = new HttpRequestMessage(HttpMethod.Get, url)
             let! response = httpClient.SendAsync(request) |> Async.AwaitTask
             response.EnsureSuccessStatusCode() |> ignore
 
             let! content = response.Content.ReadAsStreamAsync() |> Async.AwaitTask
-            return Ok content
+            return content
+        }
 
-        with
-            | ex -> return Error ex.Message
-    }
+    interface IDisposable with
+        member self.Dispose (): Unit =
+            httpClient.Dispose()
 
-let setUserAgent () : Unit =
-    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
+let getAthomeRateLimiter () = new FixedWindowRateLimiter(ATHOME_RATELIMIT_OPTIONS)
 
-//let startImageDownloads (toDownload: ImageDescriptor) (outDir: string) : PdfDescriptor =
-let startImageDownloads (chapter: ChapterEntry) : Unit = //PdfDescriptor =
-    //let imageDir = joinPathsUnix ([ outDir; string toDownload.Number ])
-    Directory.CreateDirectory(chapter.TemporaryImageDirectory) |> ignore
-
-    let localFiles = Array.init (chapter.RemoteFiles.Length) (fun i -> joinPathsUnix ([ chapter.TemporaryImageDirectory; string i ]))
-    chapter.LocalFiles <- localFiles
-
-    //Seq.zip toDownload.Urls files
-    Seq.zip (chapter.RemoteFiles) (chapter.LocalFiles)
+let startImageDownloadsAsync (network: NetworkHelper) (chapter: Chapter) : Async<Unit> =
+    Seq.zip chapter.ImageInfo.Remote chapter.ImageInfo.Local
     |> Seq.map (fun (url, file) ->
         async {
-            let! response = sendGetRequestAsync (url)
-
-            if response.IsOk() then
-                use inputStream = response.Unwrap()
-                use outputStream = new FileStream(file, FileMode.CreateNew)
-                do! inputStream.CopyToAsync(outputStream) |> Async.AwaitTask
-
-            else
-                ()
+            use! inputStream = network.sendGetRequestAsync (url)
+            use outputStream = new FileStream(file, FileMode.Create)
+            do! inputStream.CopyToAsync(outputStream) |> Async.AwaitTask
         })
     |> Async.Parallel
     |> Async.Ignore
-    |> Async.RunSynchronously
 
-    //{ Number = toDownload.Number; Files = files }
-
-let collectImageUrlsOfChapterAsync (chapterId: string) : Async<array<string>> =
+let collectImageUrlsOfChapterAsync (network: NetworkHelper) (chapterId: string) : Async<array<string>> =
     async {
-        let url = joinPathsUnix ([ Mangadex.CHAPTER_ENDPOINT; chapterId ])
-        let! response = sendGetRequestAsync (url)
+        let athomeUrl = joinPathsUnix [| Mangadex.IMAGE_ENDPOINT; chapterId |]
+        let! response = network.sendGetRequestAsync (athomeUrl)
 
-        if response.IsOk() then
-            let content = Utility.unpackJsonFromStream (Mangadex.MangadexImages.Parse) (response.Unwrap())
-            let imageProviderUrl = joinPathsUnix ([ content.BaseUrl; "data"; content.Chapter.Hash ])
-            return content.Chapter.Data |> Array.map (fun imageId -> joinPathsUnix ([ imageProviderUrl; imageId ]))
-
-        else
-            return Array.empty
+        let content = Utility.unpackJsonFromStream (Mangadex.MangadexImages.Parse) (response)
+        let baseUrl = joinPathsUnix [| content.BaseUrl; "data"; content.Chapter.Hash |]
+        return content.Chapter.Data |> Array.map (fun imageId -> joinPathsUnix [| baseUrl; imageId |])
     }
 
 [<TailCall>]
-let rec private collectChaptersFromFeedPaginated (i: int) (url: string) (limit: int) (cachedTotal: Option<int>) (entries: seq<ChapterEntry>) : seq<ChapterEntry> =
-    let paginatedUrl = ValueStringBuilder.Concat(url, "&offset=", i * limit)
-    let response = sendGetRequestAsync (paginatedUrl) |> Async.RunSynchronously
-    
-    if response.IsOk() then
-        let content = Utility.unpackJsonFromStream (Mangadex.MangadexFeed.Parse) (response.Unwrap())
-        let total = if cachedTotal.IsSome then cachedTotal else Option.Some(int content.Total)
-        
-        let foundEntries =
-            content.Data
-            |> Seq.filter(fun json -> not (json.Attributes.Chapter.Contains('.')))
-            |> Seq.distinctBy(fun json -> int json.Attributes.Chapter)
-            |> Seq.map(fun json -> int json.Attributes.Chapter, json.Id)
-            |> Map.ofSeq
+let rec private collectChaptersFromFeedPaginatedAsync
+    (network: NetworkHelper)
+    (feedUrl: string)
+    (i: int)
+    (cachedTotal: Option<int>)
+    (foundEntries: seq<Chapter>) : Async<Result<seq<Chapter>, exn>> =
+    async {
+        let feedUrlWithOffset = ValueStringBuilder.Concat(feedUrl, "&offset=", i * Mangadex.FEED_BATCHSIZE)
 
-        let updatedEntries =
-            entries
-            |> Seq.map (fun entry ->
-                if entry.Id = String.Empty then
-                    match Map.tryFind (entry.Number) (foundEntries) with
-                    | Some id -> entry.Id <- id
-                    | _ -> ()
+        try
+            let! response = network.sendGetRequestAsync (feedUrlWithOffset)
+            let content = Utility.unpackJsonFromStream (Mangadex.MangadexFeed.Parse) (response)
+            let total = if cachedTotal.IsSome then cachedTotal else Option.Some(int content.Total)
 
-                entry)
+            let newEntries =
+                content.Data
+                |> Seq.filter(fun json ->
+                    // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                    // ┃ We do not care about non-integer chapters ┃
+                    // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                    json.Attributes.Chapter.Contains('.') = false
+                )
+                |> Seq.map(fun json ->
+                    { EMPTY_CHAPTER with
+                        MangadexId = json.Id
+                        Number = int json.Attributes.Chapter
+                        ScanlationGroups =
+                            json.Relationships
+                            |> Seq.filter (fun rel -> rel.Type.Equals "scanlation_group")
+                            |> Seq.map (fun rel -> rel.Id)
+                    })
 
-        let foundAllEntries = updatedEntries |> Seq.forall(fun entry -> entry.Id <> String.Empty)
-        let noMorePagination = (i + 1) * limit >= total.Value
+            let allEntries = Seq.append foundEntries newEntries
 
-        if foundAllEntries || noMorePagination then
-            updatedEntries
+            if (i + 1) * Mangadex.FEED_BATCHSIZE >= total.Value then
+                return Ok allEntries
 
-        else
-            collectChaptersFromFeedPaginated (i + 1) (url) (limit) (total) (updatedEntries)
+            else
+                return! collectChaptersFromFeedPaginatedAsync (network) (feedUrl) (i + 1) (total) (allEntries)
 
-    else
-        Seq.empty
+        with
+        | exn -> return Error exn
+    }
 
-let collectChaptersFromFeed (url: string) (limit: int) (chapters: seq<ChapterEntry>) : seq<ChapterEntry> =
-    collectChaptersFromFeedPaginated (0) (url) (limit) (Option.None) (chapters) 
+let collectChaptersFromFeedAsync (network: NetworkHelper) (feedUrl: string) =
+    collectChaptersFromFeedPaginatedAsync (network) (feedUrl) (0) (Option.None) (Seq.empty)
+
