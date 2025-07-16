@@ -309,10 +309,10 @@ type MangadexChapters = JsonProvider<Schema=MANGDADEX_CHAPTERS_SCHEMA>
 type MangadexFeed = JsonProvider<Schema=MANGADEX_FEED_SCHEMA>
 
 [<Literal>]
-let private API = "https://api.mangadex.org"
+let private API = "http://api.mangadex.org"
 
 [<Literal>]
-let CHAPTER_ENDPOINT = API + "/at-home/server"
+let IMAGE_ENDPOINT = API + "/at-home/server"
 
 [<Literal>]
 let MANGA_ENDPOINT = API + "/chapter?includeExternalUrl=0&translatedLanguage[]=en"
@@ -320,4 +320,5 @@ let MANGA_ENDPOINT = API + "/chapter?includeExternalUrl=0&translatedLanguage[]=e
 [<Literal>]
 let FEED_ENDPOINT = API + "/manga/{0}/feed?limit={1}&includeExternalUrl=0&translatedLanguage[]=en&order[chapter]=asc"
 
-
+[<Literal>]
+let FEED_BATCHSIZE = 500

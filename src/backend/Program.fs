@@ -1,91 +1,87 @@
 module Program
+
 open CommonTypes
 open System
 open System.IO
-open System.Threading.RateLimiting
-//open type Network.ChapterDescriptor
-//open type Network.ImageDescriptor
-//open type Network.PdfDescriptor
+open Network
 
-type UserRequest() =
-    member val Title: string = String.Empty with get, set
-    member val Url: string = String.Empty with get, set
-    member val FirstChapter: int = -1 with get, set
-    member val FinalChapter: int = -1 with get, set
+type UserRequest = {
+    Title: string
+    Url: string
+    FirstChapter: int
+    FinalChapter: int
+}
 
-type private PipelineContext(request: UserRequest) =
-    member self.OutDirectory: string = request.Title
-    member self.BatchSize: int = Math.Min(int (Math.Ceiling(double request.FinalChapter * 1.15)), 500)
-    member self.FeedUrl: string = Utility.assembleIntermediateFeedUrl (request.Url) (self.BatchSize)
-    member self.LeadingZeroCount: int = Utility.calculateLeadingZeros (request.FinalChapter)
+let EMPTY_REQUEST = {
+    Title = String.Empty
+    Url = String.Empty
+    FirstChapter = 0
+    FinalChapter = 0
+}
 
-    member self.Chapters: seq<ChapterEntry> = 
-        Network.collectChaptersFromFeed
-            (self.FeedUrl)
-            (self.BatchSize)
-            ({ request.FirstChapter .. request.FinalChapter } |> Seq.map (fun number -> ChapterEntry(number, request.Title, self.LeadingZeroCount)))
+let separateMissingAndFoundChapters (needed: seq<int>) (have: seq<Chapter>) : seq<Chapter> * seq<int> =
+    let neededSet = needed |> Set.ofSeq
+    let haveSet = have |> Seq.map (fun ch -> ch.Number) |> Set.ofSeq
 
-let createChaptersFrom (request: UserRequest) : Unit =    
-    Network.setUserAgent ()
+    let found = have |> Seq.filter (fun ch -> neededSet.Contains ch.Number)
+    let missing = Set.difference neededSet haveSet
 
-    let context = PipelineContext(request)
-    Utility.createDirectoryIfNeeded (context.OutDirectory)
-    
-    let rateLimiterOptions = FixedWindowRateLimiterOptions ()
-    rateLimiterOptions.AutoReplenishment <- true
-    rateLimiterOptions.PermitLimit <- 40
-    rateLimiterOptions.QueueLimit <- Int32.MaxValue
-    rateLimiterOptions.QueueProcessingOrder <- QueueProcessingOrder.OldestFirst
-    rateLimiterOptions.Window <- TimeSpan.FromMinutes(1)
+    found, missing
 
-    use rateLimiter = new FixedWindowRateLimiter(rateLimiterOptions)
+let createChaptersFrom (request: UserRequest) : Async<Unit> =
+    async {
+        use network = new NetworkHelper ()
 
-    context.Chapters
-    |> Seq.filter (fun chapter -> chapter.Id <> String.Empty)
-    |> Seq.map (fun chapter -> async {
-        use! lease = rateLimiter.AcquireAsync().AsTask() |> Async.AwaitTask
+        let chapterRange = { request.FirstChapter .. request.FinalChapter }
+        let feedUrl = Utility.assembleFeedUrl (request.Url)
+        let! availableChapters = collectChaptersFromFeedAsync (network) (feedUrl)
 
-        // Process will wait here after exhausting the quota
+        if availableChapters.IsError() then
+            let exn = availableChapters.UnwrapError()
+            printfn "Could not collect chapters from feed"
+            printfn $"==> {exn.Message}"
 
-        let! imageUrls = Network.collectImageUrlsOfChapterAsync (chapter.Id)
-        chapter.RemoteFiles <- imageUrls
+        else
+            let foundChapters, missingChapters = separateMissingAndFoundChapters (chapterRange) (availableChapters.Unwrap())
 
-        Network.startImageDownloads (chapter)
-        Pdf.generateNew (chapter)
+            if Seq.isEmpty foundChapters then
+                printfn $"No available chapters found for: {request.Url}"
+                printfn "==> Check for any typos and ensure the requested chapters do exist"
 
-        //let imageDescriptor = { Number = chapter.Number; Urls = imageUrls }
-        //let pdfDescriptor = Network.startImageDownloads (chapter) //(imageDescriptor) (context.OutDirectory)
-        
-        //Pdf.generateNew pdfDescriptor.Files (PathJoin.from [
-        //    context.OutDirectory
-        //    $"{request.Title} Chapter {Preprocess.addLeadingZerosIfNecessary imageDescriptor.Number request.FinalChapter}.pdf"
-        //]) //(Path.Join(context.OutDirectory, $"{request.Title} Chapter {Preprocess.addLeadingZerosIfNecessary imageDescriptor.Number context.Count}.pdf"))
-    })
-    |> fun computations -> Async.Parallel(computations, Environment.ProcessorCount)
-    |> Async.Ignore
-    |> Async.RunSynchronously
+            else
+                use rateLimiter = getAthomeRateLimiter ()
 
-    //async {
-        //let imageUrls = context.ChapterDescriptors |> Seq.map(fun desc -> { Number = desc.Number; Urls = Network.collectImageUrlsOfChapter desc.Id })
-        //context.ImageDescriptors <- imageUrls
-        
-        //context.ChapterDescriptors
-        //|> Seq.map(fun desc -> async { { Number = desc.Number; Urls = Network.collectImageUrlsOfChapter desc.Id } })
-        //|> Seq.map(fun desc -> async { Network.startImageDownloads desc context.OutDirectory })
-        //|> Seq.iter (fun image -> async { Pdf.generateNew image.Files (Path.Join(context.OutDirectory, $"{request.Title} Chapter {Preprocess.addLeadingZerosIfNecessary image.Number context.Count}.pdf" )) })
+                return! foundChapters
+                    |> Seq.map (fun chapter -> async {
+                        try
+                            let tempDir = Utility.joinPathsUnix [| request.Title; string chapter.Number |]
+                            Directory.CreateDirectory (tempDir) |> ignore
+                            use! lease = rateLimiter.AcquireAsync().AsTask() |> Async.AwaitTask
 
-        //let localImageFiles = context.ImageDescriptors |> Seq.map(fun desc -> Network.startImageDownloads desc context.OutDirectory)
-    
-        //localImageFiles |> Seq.iter (fun image -> Pdf.generateNew image.Files (Path.Join(context.OutDirectory, $"{request.Title} Chapter {Preprocess.addLeadingZerosIfNecessary image.Number context.Count}.pdf")))
+                            // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+                            // ┃ Process will wait here after exhausting the quota ┃
+                            // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-    //}
+                            let! imageUrls = collectImageUrlsOfChapterAsync (network) (chapter.MangadexId)
 
+                            let finalizedChapter = {
+                                chapter with
+                                    Id = $"{request.Title} Chapter {chapter.Number}"
+                                    ImageInfo = {
+                                        Remote = imageUrls
+                                        Local = Array.init imageUrls.Length (fun i -> joinPathsUnix [| request.Title; string chapter.Number; i.ToString "D5" |])
+                                    }
+                            }
 
-//let private failedArguments () : Unit =
-//    printfn "You have not supplied the necessary command line arguments!"
+                            do! startImageDownloadsAsync (network) (finalizedChapter)
+                            Pdf.generateNew (finalizedChapter) (request.Title)
+                            Directory.Delete(tempDir, true)
 
-//let startFromArgs (args: array<string>) : Unit =
-//    match args.Length with
-//    | 3 -> createChaptersFrom { Title = args[0]; Url = args[1]; FirstChapter = Int32.Parse(args[2]); FinalChapter = Int32.Parse(args[2]) }
-//    | 4 -> createChaptersFrom { Title = args[0]; Url = args[1]; FirstChapter = Int32.Parse(args[2]); FinalChapter = Int32.Parse(args[3]) }
-//    | _ -> failedArguments ()
+                        with
+                        | exn ->
+                            printfn $"Generation of chapter {chapter.Number} failed"
+                            printfn $"==> {exn.Message}"
+                    })
+                    |> fun computations -> Async.Parallel(computations, Environment.ProcessorCount)
+                    |> Async.Ignore
+    }

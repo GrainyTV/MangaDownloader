@@ -2,6 +2,7 @@ module Widgets
 
 open Avalonia
 open Avalonia.Controls
+open Avalonia.Controls.Primitives
 open Avalonia.Layout
 open System
 open System.Diagnostics
@@ -64,3 +65,107 @@ type PercentageContainer(child: Control, widthPercentage: string, heightPercenta
         self.Children.Add(child)
         Grid.SetRow(child, 1)
         Grid.SetColumn(child, 1)
+
+
+type OpMode =
+    | SingleChapter
+    | MultiChapters
+
+type IWizardStep =
+    abstract Title : string
+    abstract Description : string
+    abstract Content : Control
+
+type OperationModeSelector(title: string, description: string) =
+    let baseControl = UniformGrid(Rows = 1, Columns = 2)
+
+    let singleChapterSelectText = DynamicText(TextBlock(Text = "Single\nChapter"), 0.115)
+    let multiChapterSelectText = DynamicText(TextBlock(Text = "Multiple\nChapters"), 0.115)
+
+    let singleChapterSelect = Button(Content = singleChapterSelectText)
+    let multiChapterSelect = Button(Content = multiChapterSelectText, Opacity = 0.5)
+
+    let mutable selectedMode = OpMode.SingleChapter
+
+    let checkButtonState (chosen: OpMode) : Unit =
+        if not(selectedMode = chosen) then
+            match chosen with
+            | OpMode.SingleChapter ->
+                singleChapterSelect.Opacity <- 1
+                multiChapterSelect.Opacity <- 0.5
+            | OpMode.MultiChapters ->
+                singleChapterSelect.Opacity <- 0.5
+                multiChapterSelect.Opacity <- 1
+
+            selectedMode <- chosen
+
+    do
+        singleChapterSelect.Click.Add(fun _ -> checkButtonState OpMode.SingleChapter)
+        multiChapterSelect.Click.Add(fun _ -> checkButtonState OpMode.MultiChapters)
+
+        baseControl.Children.AddRange [|
+            singleChapterSelect
+            multiChapterSelect
+        |]
+
+    member self.Selected = selectedMode
+
+    interface IWizardStep with
+        member self.Title = title
+        member self.Description = description
+        member self.Content = baseControl
+
+type TextInputField(title: string, description: string) =
+    let baseControl = TextBox()
+
+    member self.Typed = baseControl.Text
+
+    interface IWizardStep with
+        member self.Title = title
+        member self.Description = description
+        member self.Content = baseControl
+
+type ChapterRangeInputField(title: string, description: string) =
+    let baseControl = UniformGrid(Rows = 2, Columns = 1)
+    let textInputLower = TextBox()
+    let textInputHigher = TextBox()
+
+    do
+        baseControl.Children.AddRange [|
+            textInputLower
+            textInputHigher
+        |]
+
+    member self.LowerBound = Int32.Parse(textInputLower.Text)
+
+    member self.UpperBound = Int32.Parse(textInputHigher.Text)
+
+    interface IWizardStep with
+        member self.Title = title
+        member self.Description = description
+        member self.Content = baseControl
+
+type BackendProgressBar(title: string, description: string) =
+    let baseControl = ProgressBar()
+
+    //member self.apply(value: double) : Unit =
+    //    baseControl.
+
+    interface IWizardStep with
+        member self.Title = title
+        member self.Description = description
+        member self.Content = baseControl
+
+type WizardContent(initial: IWizardStep) as self =
+    inherit UniformGrid(Rows = 3, Columns = 1)
+
+    do
+        self.updateWith(initial)
+
+    member self.updateWith(step: IWizardStep) : Unit =
+        self.Children.Clear()
+        self.Children.AddRange [|
+            DynamicText(TextBlock(Text = step.Title), 0.125)
+            step.Content
+            DynamicText(TextBlock(Text = step.Description), 0.06)
+        |]

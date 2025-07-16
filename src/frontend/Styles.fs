@@ -36,11 +36,11 @@ let private buttonStyle () : Style =
     buttonStyle.Setters.Add(Setter(Button.BackgroundProperty, Color.from(THEME_COLOR)))
     buttonStyle
 
-type MaterialLike() as theme =
+type MaterialLike() as self =
     inherit SimpleTheme()
 
     do
-        theme.AddRange [
+        self.AddRange [|
             textStyle()
             buttonStyle()
-        ]
+        |]

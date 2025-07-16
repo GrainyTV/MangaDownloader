@@ -1,35 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <Platform Condition="$([System.OperatingSystem]::IsWindows())">Win32</Platform>
-    <Platform Condition="$([System.OperatingSystem]::IsMacOS())">macOS</Platform>
-    <Platform Condition="$([System.OperatingSystem]::IsLinux())">Linux</Platform>
-  </PropertyGroup>
-
-  <PropertyGroup> <!-- Small hack for the LSP -->
-    <RuntimeIdentifier Condition="'$(DesignTimeBuild)' == 'True'">linux-x64</RuntimeIdentifier>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <PublishAot>true</PublishAot>
-    <PublishDir>$(MSBuildProjectName)</PublishDir>
-    <PublishRelease>false</PublishRelease>
-    <StaticExecutable>true</StaticExecutable>
-    <LinkerFlavor>lld</LinkerFlavor>
-    <InvariantGlobalization>true</InvariantGlobalization>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  <PropertyGroup> <!-- Build Properties -->
+      <OutputType>Exe</OutputType>
+      <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup> <!-- Backend Sources -->
     <Compile Include="src/backend/Mangadex.fs" />
     <Compile Include="src/backend/Extensions.fs" />
     <Compile Include="src/backend/Utility.fs" />
-    <Compile Include="src/backend/CommonTypes.fs" /> 
+    <Compile Include="src/backend/CommonTypes.fs" />
     <Compile Include="src/backend/Pdf.fs" />
     <Compile Include="src/backend/Network.fs" />
     <Compile Include="src/backend/Program.fs" />
@@ -46,26 +26,6 @@
     <Compile Include="src/frontend/Main.fs" />
   </ItemGroup>
 
-  <Target Name="HandleLibraries" BeforeTargets="BeforeBuild">
-    <PropertyGroup>
-      <LibDir>lib/$(RuntimeIdentifier)</LibDir>
-      <SupportedRIDs>win-x64;linux-x64</SupportedRIDs>
-    </PropertyGroup>
-
-    <Error Condition="'$(RuntimeIdentifier)' == ''" Text="You must specify a valid RID using the -r|--runtime flag to compile this project." />
-    <Error Condition="!$(SupportedRIDs.Contains($(RuntimeIdentifier)))" Text="Unsupported RID encountered: '$(RuntimeIdentifier)'. Check the documentation on what is supported." />
-
-    <ItemGroup> <!-- Static libraries to link with -->
-      <DirectPInvoke Include="libHarfBuzzSharp" />
-      <NativeLibrary Include="$(LibDir)/libHarfBuzzSharp.a" />
-      <DirectPInvoke Include="libskia" />
-      <NativeLibrary Include="$(LibDir)/libskia.a" />
-      <DirectPInvoke Include="libSkiaSharp" />
-      <NativeLibrary Include="$(LibDir)/libSkiaSharp.a" />
-      <LinkerArg Include="-Wl,-l:libstdc++.a" />
-    </ItemGroup>
-  </Target>
-
   <ItemGroup> <!-- Backend Dependencies -->
     <PackageReference Include="FSharp.Data" Version="6.5.0" />
     <PackageReference Include="LinkDotNet.StringBuilder" Version="2.2.0" />
@@ -79,22 +39,8 @@
     <PackageReference Include="Avalonia.Themes.Simple" Version="11.1.3" />
   </ItemGroup>
 
-  <ItemGroup> <!-- Prevent Trimming on these assemblies -->
-  	<TrimmerRootAssembly Include="PdfSharp" />
-  </ItemGroup>
-
   <ItemGroup> <!-- Assets -->
     <EmbeddedResource Include="assets/**" />
   </ItemGroup>
-
-    <ItemGroup> <!-- Skip publishing dynamic libraries -->
-      <PackageReference Include="HarfBuzzSharp.NativeAssets.$(Platform)" Version="7.3.0.2" >
-        <ExcludeAssets>native</ExcludeAssets>
-      </PackageReference>
-      
-      <PackageReference Include="SkiaSharp.NativeAssets.$(Platform)" Version="2.88.8" >
-        <ExcludeAssets>native</ExcludeAssets>
-      </PackageReference>
-    </ItemGroup>
 
 </Project>
