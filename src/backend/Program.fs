@@ -28,8 +28,13 @@ let separateMissingAndFoundChapters (needed: seq<int>) (have: seq<Chapter>) : se
 
     found, missing
 
-let createChaptersFrom (request: UserRequest) : Async<Unit> =
+let createChaptersFrom
+    (request: UserRequest)
+    (progressBar: IBackendApplicable<double>)
+    (finalVerdict: IBackendApplicable<RequestResult>)
+    (endProcess: Unit -> Unit) : Async<Unit> =
     async {
+        progressBar.apply(0)
         use network = new NetworkHelper ()
 
         let chapterRange = { request.FirstChapter .. request.FinalChapter }
@@ -40,19 +45,24 @@ let createChaptersFrom (request: UserRequest) : Async<Unit> =
             let exn = availableChapters.UnwrapError()
             printfn "Could not collect chapters from feed"
             printfn $"==> {exn.Message}"
+            finalVerdict.apply (TotalFailure)
 
         else
+            progressBar.apply(10)
             let foundChapters, missingChapters = separateMissingAndFoundChapters (chapterRange) (availableChapters.Unwrap())
 
             if Seq.isEmpty foundChapters then
                 printfn $"No available chapters found for: {request.Url}"
                 printfn "==> Check for any typos and ensure the requested chapters do exist"
+                finalVerdict.apply (TotalFailure)
 
             else
+                let steps = 4
+                let progressChunk = 90.0 / double (Seq.length foundChapters) / double steps
                 use rateLimiter = getAthomeRateLimiter ()
 
-                return! foundChapters
-                    |> Seq.map (fun chapter -> async {
+                let processChapter (chapter: Chapter) : Async<Unit> =
+                    async {
                         try
                             let tempDir = Utility.joinPathsUnix [| request.Title; string chapter.Number |]
                             Directory.CreateDirectory (tempDir) |> ignore
@@ -62,7 +72,10 @@ let createChaptersFrom (request: UserRequest) : Async<Unit> =
                             // ┃ Process will wait here after exhausting the quota ┃
                             // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
+                            // Step #1
+
                             let! imageUrls = collectImageUrlsOfChapterAsync (network) (chapter.MangadexId)
+                            progressBar.apply(progressChunk)
 
                             let finalizedChapter = {
                                 chapter with
@@ -73,15 +86,33 @@ let createChaptersFrom (request: UserRequest) : Async<Unit> =
                                     }
                             }
 
+                            // Step #2
+
                             do! startImageDownloadsAsync (network) (finalizedChapter)
+                            progressBar.apply(progressChunk)
+
+                            // Step #3
+
                             Pdf.generateNew (finalizedChapter) (request.Title)
+                            progressBar.apply(progressChunk)
+
+                            // Step #4
+
                             Directory.Delete(tempDir, true)
+                            progressBar.apply (progressChunk)
 
                         with
                         | exn ->
                             printfn $"Generation of chapter {chapter.Number} failed"
                             printfn $"==> {exn.Message}"
-                    })
+                    }
+
+                do! foundChapters
+                    |> Seq.map (processChapter)
                     |> fun computations -> Async.Parallel(computations, Environment.ProcessorCount)
                     |> Async.Ignore
+
+                finalVerdict.apply(PerfectCompletion)
+
+        endProcess()
     }

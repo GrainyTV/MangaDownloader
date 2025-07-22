@@ -25,3 +25,11 @@ let EMPTY_CHAPTER = {
         Local = Array.empty
     }
 }
+
+type IBackendApplicable<'T> =
+    abstract member apply : 'T -> Unit
+
+type RequestResult =
+    | TotalFailure
+    | PartialSuccess
+    | PerfectCompletion

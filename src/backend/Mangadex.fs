@@ -309,7 +309,7 @@ type MangadexChapters = JsonProvider<Schema=MANGDADEX_CHAPTERS_SCHEMA>
 type MangadexFeed = JsonProvider<Schema=MANGADEX_FEED_SCHEMA>
 
 [<Literal>]
-let private API = "http://api.mangadex.org"
+let private API = "https://api.mangadex.org"
 
 [<Literal>]
 let IMAGE_ENDPOINT = API + "/at-home/server"

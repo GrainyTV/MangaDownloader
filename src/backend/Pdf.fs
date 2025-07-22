@@ -21,7 +21,6 @@ let generateNew (chapter: Chapter) (name: string) : Unit =
         renderer.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point))
 
     document.Info.Title <- name
-    document.Info.Elements.Add("/Scanlators", PdfString("shit"))
 
     let file = String.Format("{0} Chapter {1}.pdf", name, chapter.Number.ToString "D4")
     document.Save (Utility.joinPathsUnix [| name; file |])
