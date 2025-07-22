@@ -1,8 +1,14 @@
 [<AutoOpen>]
 module Extensions
 
-open System.IO
+open Avalonia
 open PdfSharp.Pdf
+open System
+open System.Diagnostics
+open System.IO
+
+type String with
+    member self.IsEmpty : Boolean = self.Length = 0
 
 #nowarn "FS0025"
 type Result<'T, 'TError> with
@@ -28,3 +34,12 @@ type PdfDocument with
         if howMany > 0 then
             self.AddPage() |> ignore
             self.AddPages(howMany - 1)
+
+type AppBuilder with
+    member self.EnableDebugMessagesIfNeeded(): AppBuilder =
+    #if DEBUG
+        Trace.Listeners.Add(new TextWriterTraceListener(Console.Error)) |> ignore
+        Trace.AutoFlush <- true
+        self.LogToTrace() |> ignore
+    #endif
+        self
