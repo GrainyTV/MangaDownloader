@@ -16,19 +16,87 @@ open ObjectInitHelper
 open System.IO
 open System.Text.RegularExpressions
 
+open Avalonia.Media.TextFormatting
+
 type DynamicTB(content: TextBlock) as self =
-    inherit Viewbox(Stretch = Stretch.Uniform)
+    inherit ContentControl(Content = content)
+
+    let MAX_FONTSIZE = 64
+    let fontSizeChanged = Event<Double>()
+    let mutable allowIndividualSizing = true
+
+    let measureTextFromFontSizeMultiline (fontSize: Double) (availableWidth: Double): Size =
+        let typeface = Typeface(content.FontFamily, content.FontStyle, content.FontWeight, content.FontStretch)
+
+        use renderedText = new TextLayout(content.Text, typeface, fontSize,
+            foreground = content.Foreground,
+            textAlignment = content.TextAlignment,
+            textWrapping = content.TextWrapping,
+            textTrimming = content.TextTrimming,
+            textDecorations = content.TextDecorations,
+            flowDirection = content.FlowDirection,
+            lineHeight = content.LineHeight,
+            letterSpacing = content.LetterSpacing,
+            maxLines = content.MaxLines,
+            maxWidth = availableWidth)
+
+        Size(renderedText.WidthIncludingTrailingWhitespace + renderedText.OverhangLeading + renderedText.OverhangTrailing,
+             renderedText.Height + renderedText.OverhangAfter)
+
+    [<TailCall>]
+    let rec findFittingFontSize (from: Int32) (availableSize: Size): Double =
+        let textSize = measureTextFromFontSizeMultiline (from) (availableSize.Width)
+
+        if textSize.Width < availableSize.Width && textSize.Height < availableSize.Height then
+            from
+
+        else
+            findFittingFontSize (from - 2) (availableSize)
 
     do
-        self.Child <- content
+        self.LayoutUpdated.Add(fun _ ->
+            if content.Text.IsNotEmpty &&
+               self.IsEffectivelyVisible &&
+               self.Bounds.Size.NearlyEquals(Size(0, 0)) = false then
+                let fs = findFittingFontSize MAX_FONTSIZE self.Bounds.Size
+
+                if allowIndividualSizing then
+                    self.updateFontSize fs
+                else
+                    fontSizeChanged.Trigger fs)
+
+    member self.updateFontSize (fs: Double) : Unit = content.FontSize <- fs
+
+    member self.disallowIndividualSizing () : Unit = allowIndividualSizing <- false
 
     member self.Text
         with get() = content.Text
         and set value = content.Text <- value
 
+    [<CLIEvent>]
+    member self.FontSizeChanged = fontSizeChanged.Publish
+
     new() = DynamicTB(TextBlock(Text = String.Empty))
 
     new(txt: String) = DynamicTB(TextBlock(Text = txt))
+
+type DynamicTBGroup(children: seq<DynamicTB>) =
+    let tbCount = Seq.length children
+    let sizes = ResizeArray<Double>()
+
+    let appendAndEvaluate (fs: Double) : Unit =
+        sizes.Add (fs)
+
+        if sizes.Count = tbCount then
+            let chosenMin = sizes |> Seq.min
+            sizes.Clear()
+
+            children |> Seq.iter (fun tb -> tb.updateFontSize chosenMin)
+
+    do
+        children |> Seq.iter (fun tb ->
+            tb.disallowIndividualSizing ()
+            tb.FontSizeChanged.Add appendAndEvaluate)
 
 type PercentageContainer(child: Control, widthPercentage: string, heightPercentage: string) as self =
     inherit Grid()
@@ -87,8 +155,10 @@ type IWizardStepProvider =
 type OperationModeSelector(desc: String * String) =
     let baseControl = UniformGrid(Rows = 1, Columns = 2)
 
-    let singleChapterSelectText = DynamicTB("Single\nChapter")
-    let multiChapterSelectText = DynamicTB("Multiple\nChapters")
+    let singleChapterSelectText = DynamicTB(TextBlock(Text = "Single Chapter", TextWrapping = TextWrapping.NoWrap))
+    let multiChapterSelectText = DynamicTB(TextBlock(Text = "Multiple Chapters", TextWrapping = TextWrapping.NoWrap))
+
+    let textGroup = DynamicTBGroup [| singleChapterSelectText; multiChapterSelectText |]
 
     let singleChapterSelect = Button(Content = singleChapterSelectText)
     let multiChapterSelect = Button(Content = multiChapterSelectText, Opacity = 0.5)
@@ -118,6 +188,8 @@ type OperationModeSelector(desc: String * String) =
 
     member self.Selected = selectedMode
 
+    member self.Reset() : Unit = checkButtonState (OpMode.SingleChapter)
+
     interface IWizardStepProvider with
         member self.Step = { Title = fst (desc); Description = snd (desc); Content = baseControl }
 
@@ -134,15 +206,17 @@ type TextInputField(desc: String * String) =
 
         timer.Elapsed.Add(fun _ -> Dispatcher.UIThread.Invoke(fun _ -> finishedTyping.Trigger baseControl.Text))
 
-    member self.Typed = baseControl.Text
-
     [<CLIEvent>]
     member self.FinishedTyping = finishedTyping.Publish
+
+    member self.Typed = baseControl.Text
+
+    member self.Clear() : Unit = baseControl.Clear()
 
     interface IWizardStepProvider with
         member self.Step = { Title = fst (desc); Description = snd (desc); Content = baseControl }
 
-type DoubleInputField(desc: String * String) =
+type DoubleTextInputField(desc: String * String) =
     let baseControl = UniformGrid(Rows = 1, Columns = 2)
     let textInputLower = TextBox(Watermark = "From:")
     let textInputUpper = TextBox(Watermark = "To:")
@@ -152,12 +226,17 @@ type DoubleInputField(desc: String * String) =
     let finishedTyping = Event<string * string>()
 
     do
-        textInputLower.TextChanged.Add(fun args ->
+        baseControl.Children.AddRange [|
+            textInputLower
+            textInputUpper
+        |]
+
+        textInputLower.TextChanged.Add(fun _ ->
             timerLower.Stop()
             timerLower.Start()
         )
 
-        textInputUpper.TextChanged.Add(fun args ->
+        textInputUpper.TextChanged.Add(fun _ ->
             timerUpper.Stop()
             timerUpper.Start()
         )
@@ -165,14 +244,12 @@ type DoubleInputField(desc: String * String) =
         timerLower.Elapsed.Add(fun _ -> Dispatcher.UIThread.Invoke(fun _ -> finishedTyping.Trigger(textInputLower.Text, textInputUpper.Text)))
         timerUpper.Elapsed.Add(fun _ -> Dispatcher.UIThread.Invoke(fun _ -> finishedTyping.Trigger(textInputLower.Text, textInputUpper.Text)))
 
-    do
-        baseControl.Children.AddRange [|
-            textInputLower
-            textInputUpper
-        |]
-
     [<CLIEvent>]
     member self.FinishedTyping = finishedTyping.Publish
+
+    member self.Clear() : Unit =
+        textInputLower.Clear()
+        textInputUpper.Clear()
 
     interface IWizardStepProvider with
         member self.Step = { Title = fst (desc); Description = snd (desc); Content = baseControl }
@@ -180,6 +257,9 @@ type DoubleInputField(desc: String * String) =
 type BackendProgressBar(desc: String * String) =
     let progress = ProgressBar(Minimum = 0, Maximum = 100)
     let baseControl = PercentageContainer (progress, "75%", "20%")
+
+    member self.Reset() : Unit =
+        progress.Value <- 0
 
     interface IWizardStepProvider with
         member self.Step = { Title = fst (desc); Description = snd (desc); Content = baseControl }
@@ -200,7 +280,7 @@ type ResultShowcase(title: String) =
             Dispatcher.UIThread.Invoke(fun _ ->
                 match which with
                 | CommonTypes.RequestResult.TotalFailure ->
-                    emoji.Text <- "🛑"
+                    emoji.Text <- "🚨"
                     step <- { step with Description = "Operation failed" }
 
                 | CommonTypes.RequestResult.PartialSuccess ->
@@ -221,195 +301,15 @@ type WizardContent(initial: IWizardStepProvider) as self =
     member self.updateWith(step: WizardStep) : Unit =
         self.Children.Clear()
         self.Children.AddRange [|
-            PercentageContainer(DynamicTB(step.Title), "25%", "100%")
+            PercentageContainer(DynamicTB(TextBlock(Text = step.Title)), "75%", "85%")
             step.Content
-            PercentageContainer(DynamicTB(step.Description), "75%", "100%")
+            PercentageContainer(DynamicTB(TextBlock(Text = step.Description, TextAlignment = TextAlignment.Center)), "75%", "75%")
         |]
 
 type WizardStepUnion =
     | Title of TextInputField
     | Mode of OperationModeSelector
     | Url of TextInputField
-    | Howmany of DoubleInputField
+    | Howmany of DoubleTextInputField
     | Process
     | Finish of ResultShowcase
-
-type StackLayout() =
-    let titleDefine = TextInputField("Title", "Enter a title for your manga")
-    let opModeSelector = OperationModeSelector("Mode", "Select an operation mode")
-    let urlDefine = TextInputField("Url", "Paste the URL of the desired manga")
-    let chapterRangeDefine = DoubleInputField("How Many", "Provide an inclusive range of chapters")
-    let backendProcess = BackendProgressBar("In Progress", "Your files are being generated")
-    let resultShowcase = ResultShowcase("Done")
-
-    let mutable request = Program.EMPTY_REQUEST
-    let mutable selectedWizardStep = Title titleDefine
-
-    [<Literal>]
-    let MANGADEX_URL_PATTERN = @"^https://mangadex\.org/title/[a-z0-9]{8}(-[a-z0-9]{4}){3}-[a-z0-9]{12}(?=/|$)"
-
-    let content = WizardContent(titleDefine)
-    let stepChanged = Event<WizardStepUnion>()
-    let allowProceed = Event<Unit>()
-    let disallowProceed = Event<Unit>()
-    let failedInput = Event<String>()
-
-    let tryValidateTitle (text: String) : Option<String> =
-        let allowedMin = 1
-        let allowedMax = 99
-        let invalidFilenameChars = Path.GetInvalidFileNameChars()
-
-        if text.Length < allowedMin || text.Length > allowedMax then None
-        elif invalidFilenameChars |> Array.exists (fun inv -> text.Contains(inv)) then None
-        else Some (text)
-
-    let tryValidateUrl (text: String) : Option<String> =
-        let validate = Regex.Match(text, MANGADEX_URL_PATTERN, RegexOptions.Compiled)
-
-        if validate.Success then
-            Some (validate.Value)
-
-        else
-            None
-
-    let tryValidateChapterRange (lower: String) (upper: String) : Option<Int32 * Int32> =
-        let allowedMin = 0
-        let allowedMax = 9999
-
-        match Int32.TryParse(lower), Int32.TryParse(upper) with
-        | (true, lowerValue), (true, upperValue) ->
-            if lowerValue < allowedMin || lowerValue > allowedMax then None
-            elif upperValue < allowedMin || upperValue > allowedMax then None
-            elif lowerValue >= upperValue then None
-            else Some(lowerValue, upperValue)
-
-        | _ -> None
-
-    let changeStep (newStep: WizardStepUnion) (contentToUse: IWizardStepProvider) : Unit =
-        selectedWizardStep <- newStep
-        stepChanged.Trigger (selectedWizardStep)
-        content.updateWith (contentToUse.Step)
-
-    do
-        // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-        // ┃ Discard events that arrive after the user has already proceeded ┃
-        // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
-        titleDefine.FinishedTyping.Add(fun title ->
-            match selectedWizardStep with
-            | Title _ ->
-                let titleTrimmed = title.Trim()
-
-                if not (titleTrimmed.IsEmpty) then
-                    let validation = tryValidateTitle (titleTrimmed)
-
-                    if validation.IsSome then
-                        request <- { request with Title = validation.Value }
-                        allowProceed.Trigger()
-
-                    else
-                        disallowProceed.Trigger()
-                        failedInput.Trigger("Title must be raw text without invalid filename characters and with length [1; 100)")
-
-                else
-                    disallowProceed.Trigger()
-                    failedInput.Trigger(String.Empty)
-
-            | _ -> ()
-        )
-
-        urlDefine.FinishedTyping.Add(fun url ->
-            match selectedWizardStep with
-            | Url _ ->
-                let urlTrimmed = url.Trim()
-
-                if not (urlTrimmed.IsEmpty) then
-                    let validation = tryValidateUrl (urlTrimmed)
-
-                    if validation.IsSome then
-                        request <- { request with Url = validation.Value }
-                        allowProceed.Trigger()
-
-                    else
-                        disallowProceed.Trigger()
-                        failedInput.Trigger("Url must use this form: https://mangadex.org/title/<UUID>/...")
-
-                else
-                    disallowProceed.Trigger ()
-                    failedInput.Trigger (String.Empty)
-
-            | _ -> ()
-        )
-
-        chapterRangeDefine.FinishedTyping.Add(fun (lower, upper) ->
-            match selectedWizardStep with
-            | Howmany _ ->
-                let lowerTrimmed = lower.Trim()
-                let upperTrimmed = upper.Trim()
-
-                if not (lowerTrimmed.IsEmpty) && not (upperTrimmed.IsEmpty) then
-                    let validation = tryValidateChapterRange (lowerTrimmed) (upperTrimmed)
-
-                    if validation.IsSome then
-                        request <- {
-                        request with
-                            FirstChapter = fst validation.Value
-                            FinalChapter = snd validation.Value
-                        }
-                        allowProceed.Trigger()
-
-                    else
-                        disallowProceed.Trigger()
-                        failedInput.Trigger("Chapter range must be two distinct integers")
-
-                else
-                    disallowProceed.Trigger ()
-                    failedInput.Trigger(String.Empty)
-
-            | _ -> ()
-        )
-
-    [<CLIEvent>]
-    member self.AllowProceed = allowProceed.Publish
-
-    [<CLIEvent>]
-    member self.DisallowProceed = disallowProceed.Publish
-
-    [<CLIEvent>]
-    member self.StepChanged = stepChanged.Publish
-
-    [<CLIEvent>]
-    member self.FailedInput = failedInput.Publish
-
-    member self.Active = content
-
-    member self.ProceedButtonText =
-        match selectedWizardStep with
-        | Url _ | Process -> "Start"
-        | _ -> "Next"
-
-    member self.FinishProcessing() : Unit = Dispatcher.UIThread.Invoke(fun _ -> self.Proceed())
-
-    member self.Proceed() : Unit =
-        match selectedWizardStep with
-        | Title t -> changeStep (Mode opModeSelector) (opModeSelector)
-        | Mode m ->
-            disallowProceed.Trigger()
-
-            match m.Selected with
-            | SingleChapter -> ()
-            | MultiChapters -> changeStep (Howmany chapterRangeDefine) (chapterRangeDefine)
-
-        | Url u ->
-            disallowProceed.Trigger ()
-            changeStep (Process) (backendProcess)
-            Program.createChaptersFrom (request) (backendProcess) (resultShowcase) (self.FinishProcessing) |> Async.StartImmediate
-
-        | Howmany h ->
-            disallowProceed.Trigger ()
-            changeStep (Url urlDefine) (urlDefine)
-
-        | Process ->
-            changeStep (Finish resultShowcase) (resultShowcase)
-
-        | Finish f -> ()

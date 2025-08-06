@@ -20,7 +20,10 @@ let generateNew (chapter: Chapter) (name: string) : Unit =
         use renderer = XGraphics.FromPdfPage(page)
         renderer.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point))
 
-    document.Info.Title <- name
+    document.Info.Title <- String.Format("{0} Chapter {1}", name, chapter.Number.ToString())
+    document.Info.Author <- "github.com/GrainyTV/MangaDownloader"
+    document.Info.Subject <- "Manga"
+    document.Info.Keywords <- quotedStringList(chapter.ScanlationGroups)
 
     let file = String.Format("{0} Chapter {1}.pdf", name, chapter.Number.ToString "D4")
     document.Save (Utility.joinPathsUnix [| name; file |])

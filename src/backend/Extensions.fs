@@ -2,31 +2,15 @@
 module Extensions
 
 open Avalonia
+open Avalonia.Styling
 open PdfSharp.Pdf
 open System
+open System.Collections.Generic
 open System.Diagnostics
 open System.IO
 
 type String with
-    member self.IsEmpty : Boolean = self.Length = 0
-
-#nowarn "FS0025"
-type Result<'T, 'TError> with
-    member self.IsOk() : bool =
-        Result.isOk(self)
-
-    member self.IsError() : bool =
-        not (self.IsOk())
-
-    member self.Unwrap() : 'T =
-        assert (self.IsOk ())
-        let (Ok unwrapped) = self
-        unwrapped
-
-    member self.UnwrapError() : 'TError =
-        assert (self.IsError ())
-        let (Error error) = self
-        error
+    member self.IsNotEmpty : Boolean = not (self.Length = 0)
 
 type PdfDocument with
     [<TailCall>]
@@ -43,3 +27,7 @@ type AppBuilder with
         self.LogToTrace() |> ignore
     #endif
         self
+
+type Style with
+    member self.AddRange(entries: seq<AvaloniaProperty * Object>) : Unit =
+        entries |> Seq.iter (fun (prop, value) -> self.Add (Setter(prop, value)))

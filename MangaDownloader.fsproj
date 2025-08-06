@@ -3,13 +3,24 @@
   <PropertyGroup> <!-- Build Properties -->
       <OutputType>Exe</OutputType>
       <TargetFramework>net8.0</TargetFramework>
+      <PublishSingleFile>true</PublishSingleFile>
+      <PublishDir>$(MSBuildProjectName)</PublishDir>
+      <SelfContained>true</SelfContained>
+      <DebugType>embedded</DebugType>
+      <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+      <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup> <!-- Backend Sources -->
     <Compile Include="src/backend/Mangadex.fs" />
     <Compile Include="src/backend/Extensions.fs" />
+
+    <Compile Include="src/backend/NetworkHelper.fs" />
+    <Compile Include="src/backend/AppScope.fs" />
+
     <Compile Include="src/backend/Utility.fs" />
     <Compile Include="src/backend/CommonTypes.fs" />
+    <Compile Include="src/backend/Errors.fs" />
     <Compile Include="src/backend/Pdf.fs" />
     <Compile Include="src/backend/Network.fs" />
     <Compile Include="src/backend/Program.fs" />
@@ -21,6 +32,7 @@
     <Compile Include="src/frontend/Widgets.fs" />
     <Compile Include="src/frontend/Styles.fs" />
     <Compile Include="src/frontend/FloatingActionButton.fs" />
+    <Compile Include="src/frontend/StackLayout.fs" />
     <Compile Include="src/frontend/DataProviderPanel.fs" />
     <Compile Include="src/frontend/ApplicationWindow.fs" />
     <Compile Include="src/frontend/Config.fs" />
@@ -32,6 +44,8 @@
     <PackageReference Include="LinkDotNet.StringBuilder" Version="2.2.0" />
     <PackageReference Include="PDFsharp" Version="6.1.1" />
     <PackageReference Include="System.Threading.RateLimiting" Version="8.0.0" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup> <!-- Frontend Dependencies -->
@@ -46,7 +60,8 @@
   <ItemGroup> <!-- Assets -->
     <AvaloniaResource Include="assets/font/ArgentumSans-*.otf" />
     <AvaloniaResource Include="assets/font/NotoColorEmoji-Regular.ttf" />
-    <AvaloniaResource Include="assets/img/starry-night-sky.jpg" />
+    <AvaloniaResource Include="assets/img/wallhaven-jx1ex5_3840x2160.png" />
+    <AvaloniaResource Include="assets/img/wallhaven-wepl6x_3840x2160.png" />
   </ItemGroup>
 
 </Project>
