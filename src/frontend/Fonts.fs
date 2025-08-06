@@ -4,11 +4,10 @@ open System
 open Avalonia.Media
 open Avalonia.Media.Fonts
 
-[<Literal>]
-let private KEY = "fonts:Local" + "#"
+let private FONTS_LOCATION = AppScope.AVALONIA_RESOURCES + "/font"
 
 [<Literal>]
-let private LOCATION = "avares://MangaDownloader/assets/font"
+let private KEY = "fonts:Local" + "#"
 
 [<Literal>]
 let ARGENTUM_SANS = KEY + "Argentum Sans"
@@ -17,5 +16,5 @@ let ARGENTUM_SANS = KEY + "Argentum Sans"
 let NOTO_COLOR_EMOJI = KEY + "Noto Color Emoji"
 
 let registerCustom (fontManager: FontManager) : Unit =
-    fontManager.AddFontCollection(new EmbeddedFontCollection(Uri(ARGENTUM_SANS), Uri(LOCATION)))
-    fontManager.AddFontCollection(new EmbeddedFontCollection(Uri(NOTO_COLOR_EMOJI), Uri(LOCATION)))
+    fontManager.AddFontCollection(new EmbeddedFontCollection(Uri(ARGENTUM_SANS), Uri(FONTS_LOCATION)))
+    fontManager.AddFontCollection(new EmbeddedFontCollection(Uri(NOTO_COLOR_EMOJI), Uri(FONTS_LOCATION)))
