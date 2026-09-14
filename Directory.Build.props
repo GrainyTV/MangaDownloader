@@ -1,7 +1,6 @@
 <Project>
-  
-  <PropertyGroup>
-    <ArtifactsPath>$(MSBuildThisFileDirectory)build</ArtifactsPath>
-  </PropertyGroup>
+    <PropertyGroup>
+        <ArtifactsPath>$(MSBuildThisFileDirectory)out</ArtifactsPath>
+    </PropertyGroup>
 
 </Project>
