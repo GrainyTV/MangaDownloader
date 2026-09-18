@@ -1,0 +1,59 @@
+<Window
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MangaDownloader"
+    x:Class="MangaDownloader.MainWindow"
+    x:DataType="local:MainWindowViewModel"
+
+    Title="Manga Downloader"
+    Width="960"
+    MinWidth="960"
+    Height="540"
+    MinHeight="540"
+    WindowStartupLocation="CenterScreen">
+
+    <DockPanel LastChildFill="true">
+        <!-- App Bar -->
+        <Grid Name="appBar" Height="56" DockPanel.Dock="Top" Background="Black" DoubleTapped="AppBarDoubleTapped" PointerPressed="AppBarPressed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="192"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="Manga Downloader" FontSize="22" FontWeight="Bold" HorizontalAlignment="Left" Padding="16,0" />
+
+            <UniformGrid Grid.Column="1" Rows="1" Columns="2">
+                <local:PercentageContainer WidthPercentage="50%" HeightPercentage="50%">
+                    <Button Content="Light Theme" Background="Yellow" />
+                </local:PercentageContainer>
+
+                <local:PercentageContainer WidthPercentage="50%" HeightPercentage="50%">
+                    <Button Content="Audio ON" />
+                </local:PercentageContainer>
+            </UniformGrid>
+
+        </Grid>
+
+        <!-- User Area -->
+        <Panel>
+            <Image Source="avares://MangaDownloader/assets/img/wallhaven-jx1ex5_3840x2160.png" Stretch="UniformToFill" />
+
+            <local:PercentageContainer WidthPercentage="30%" HeightPercentage="66.67%">
+                <local:DataProviderStackPanel Name="DataProviderPanelMain" />
+            </local:PercentageContainer>
+
+            <local:FancyButton
+                Width="56"
+                Height="56"
+                CornerRadius="28"
+                Margin="28"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Label="New"
+                Command="{Binding UnhideDataProviderPanel}" />
+
+        </Panel>
+
+    </DockPanel>
+
+</Window>

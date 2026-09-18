@@ -20,42 +20,33 @@ let private initUserArea () : Panel =
 
     let interactiveArea = Grid(ShowGridLines = false)
 
-    // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-    // ┃ Area should be a 3x3 grid ┃
-    // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-    
     interactiveArea.ColumnDefinitions.AddRange [|
         ColumnDefinition(3, GridUnitType.Star)
         ColumnDefinition(2.25, GridUnitType.Star)
         ColumnDefinition(3, GridUnitType.Star)
     |]
-    
+
     interactiveArea.RowDefinitions.AddRange [|
         RowDefinition(1, GridUnitType.Star)
         RowDefinition(4, GridUnitType.Star)
         RowDefinition(1, GridUnitType.Star)
     |]
-    
+
     let wizard = DataProviderPanel()
     interactiveArea.Children.Add(wizard.Layout)
-
-    // ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-    // ┃ Wizard should be the middle cell (1, 1) ┃
-    // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-
     Grid.SetColumn(wizard.Layout, 1)
     Grid.SetRow(wizard.Layout, 1)
 
     let createNewButton = FloatingActionButton (56, "New", fun _ -> wizard.Show(true))
 
     let overlay = Panel()
-    
+
     overlay.Children.AddRange [|
         backgroundImage
         interactiveArea
         createNewButton
     |]
-    
+
     overlay
 
 let private initAppBar (title: string) : Grid =
@@ -90,7 +81,7 @@ let private initAppBar (title: string) : Grid =
 
     appBar
 
-type Window(title: String, targetWidth: Int32, targetHeight: Int32) as self =
+type Window(title: string, targetWidth: int, targetHeight: int) as self =
     inherit Controls.Window(
         Title = title,
         Width = targetWidth,
@@ -102,6 +93,7 @@ type Window(title: String, targetWidth: Int32, targetHeight: Int32) as self =
     let appBar = initAppBar (title)
     let userArea = initUserArea ()
     let windowContent = DockPanel(LastChildFill = true)
+
     let mutable isWindowDragInEffect = false
     let mutable cursorPositionAtWindowDragStart = Point(0, 0)
 

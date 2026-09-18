@@ -1,67 +1,96 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup> <!-- Build Properties -->
-      <OutputType>Exe</OutputType>
-      <TargetFramework>net8.0</TargetFramework>
-      <PublishSingleFile>true</PublishSingleFile>
-      <PublishDir>$(MSBuildProjectName)</PublishDir>
-      <SelfContained>true</SelfContained>
-      <DebugType>embedded</DebugType>
-      <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-      <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-  </PropertyGroup>
+    <ItemGroup>
+        <RID Include="linux-x64" />
+        <RID Include="linux-musl-x64" />
+        <RID Include="win-x64" />
+        <RID Include="osx-x64" />
+    </ItemGroup>
 
-  <ItemGroup> <!-- Backend Sources -->
-    <Compile Include="src/backend/Mangadex.fs" />
-    <Compile Include="src/backend/Extensions.fs" />
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <RuntimeIdentifiers>@(RID->'%(Identity)')</RuntimeIdentifiers>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishDir>out\publish</PublishDir>
+        <SelfContained>true</SelfContained>
+        <DebugType>embedded</DebugType>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    </PropertyGroup>
 
-    <Compile Include="src/backend/NetworkHelper.fs" />
-    <Compile Include="src/backend/AppScope.fs" />
+    <Target Name="PublishAll">
+        <MSBuild
+            Projects="$(MSBuildProjectFullPath)"
+            Targets="Restore;Publish"
+            Properties="Configuration=Release;RuntimeIdentifier=%(RID.Identity);PublishDir=$(PublishDir)\%(RID.Identity)" />
+    </Target>
 
-    <Compile Include="src/backend/Utility.fs" />
-    <Compile Include="src/backend/CommonTypes.fs" />
-    <Compile Include="src/backend/Errors.fs" />
-    <Compile Include="src/backend/Pdf.fs" />
-    <Compile Include="src/backend/Network.fs" />
-    <Compile Include="src/backend/Program.fs" />
-  </ItemGroup>
+    <!-- Backend Sources -->
+    <ItemGroup>
+        <Compile Include="src/backend/Mangadex.fs" />
+        <Compile Include="src/backend/Extensions.fs" />
 
-  <ItemGroup> <!-- Frontend Sources -->
-    <Compile Include="src/frontend/ObjectInitHelper.fs" />
-    <Compile Include="src/frontend/Fonts.fs" />
-    <Compile Include="src/frontend/Widgets.fs" />
-    <Compile Include="src/frontend/Styles.fs" />
-    <Compile Include="src/frontend/FloatingActionButton.fs" />
-    <Compile Include="src/frontend/StackLayout.fs" />
-    <Compile Include="src/frontend/DataProviderPanel.fs" />
-    <Compile Include="src/frontend/ApplicationWindow.fs" />
-    <Compile Include="src/frontend/Config.fs" />
-    <Compile Include="src/frontend/Main.fs" />
-  </ItemGroup>
+        <Compile Include="src/backend/NetworkHelper.fs" />
+        <Compile Include="src/backend/AppScope.fs" />
 
-  <ItemGroup> <!-- Backend Dependencies -->
-    <PackageReference Include="FSharp.Data" Version="6.5.0" />
-    <PackageReference Include="LinkDotNet.StringBuilder" Version="2.2.0" />
-    <PackageReference Include="PDFsharp" Version="6.1.1" />
-    <PackageReference Include="System.Threading.RateLimiting" Version="8.0.0" />
-    <PackageReference Include="Serilog" Version="4.3.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-  </ItemGroup>
+        <Compile Include="src/backend/Utility.fs" />
+        <Compile Include="src/backend/CommonTypes.fs" />
+        <Compile Include="src/backend/Errors.fs" />
+        <Compile Include="src/backend/Pdf.fs" />
+        <Compile Include="src/backend/Network.fs" />
+        <Compile Include="src/backend/Program.fs" />
+    </ItemGroup>
 
-  <ItemGroup> <!-- Frontend Dependencies -->
-    <PackageReference Include="Avalonia" Version="11.1.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.1.3" />
-    <PackageReference Include="Avalonia.Themes.Simple" Version="11.1.3" />
-    <PackageReference Include="SkiaSharp" Version="3.116.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.116.1" />
-  </ItemGroup>
+    <!-- UI Sources -->
+    <ItemGroup>
+        <!-- To Remove -->
+        <Compile Include="src/frontend/ObjectInitHelper.fs" />
+        <Compile Include="src/frontend/Fonts.fs" />
+        <Compile Include="src/frontend/Widgets.fs" />
+        <Compile Include="src/frontend/Styles.fs" />
+        <!-- <Compile Include="src/frontend/FloatingActionButton.fs" /> -->
+        <!-- <Compile Include="src/frontend/StackLayout.fs" /> -->
+        <!-- <Compile Include="src/frontend/DataProviderPanel.fs" /> -->
+        <!-- <Compile Include="src/frontend/ApplicationWindow.fs" /> -->
+        <!-- <Compile Include="src/frontend/Main.fs" /> -->
+        <Compile Include="src/CommandAdapter.fs" />
+        <Compile Include="src/FancyButton.fs" />
+        <Compile Include="src/PercentageContainer.fs" />
+        <Compile Include="src/DataProviderPanel.fs" />
+        <Compile Include="src/DataProviderStackPanel.fs" />
+        <Compile Include="src/MainWindow.fs" />
+        <Compile Include="src/Main.fs" />
+    </ItemGroup>
 
-  <ItemGroup> <!-- Assets -->
-    <AvaloniaResource Include="assets/font/ArgentumSans-*.otf" />
-    <AvaloniaResource Include="assets/font/NotoColorEmoji-Regular.ttf" />
-    <AvaloniaResource Include="assets/img/wallhaven-jx1ex5_3840x2160.png" />
-    <AvaloniaResource Include="assets/img/wallhaven-wepl6x_3840x2160.png" />
-  </ItemGroup>
+    <!-- Backend Dependencies -->
+    <ItemGroup>
+        <PackageReference Include="FSharp.Data" Version="6.5.0" />
+        <PackageReference Include="LinkDotNet.StringBuilder" Version="2.2.0" />
+        <PackageReference Include="PDFsharp" Version="6.1.1" />
+        <PackageReference Include="System.Threading.RateLimiting" Version="8.0.0" />
+        <PackageReference Include="Serilog" Version="4.3.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    </ItemGroup>
+
+    <!-- UI Dependencies -->
+    <ItemGroup>
+        <!-- 11.1.3 old version -->
+        <PackageReference Include="Avalonia" Version="12.1.0" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+        <PackageReference Include="Avalonia.Themes.Simple" Version="12.1.0" />
+        <PackageReference Include="Avalonia.Wayland" Version="12.1.0" />
+        <!-- <PackageReference Include="SkiaSharp" Version="3.116.1" /> -->
+        <!-- <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" /> -->
+        <!-- <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.116.1" /> -->
+    </ItemGroup>
+
+    <!-- Embedded Assets -->
+    <ItemGroup>
+        <AvaloniaResource Include="assets/font/ArgentumSans-*.otf" />
+        <AvaloniaResource Include="assets/font/NotoColorEmoji-Regular.ttf" />
+        <AvaloniaResource Include="assets/img/wallhaven-jx1ex5_3840x2160.png" />
+        <AvaloniaResource Include="assets/img/wallhaven-wepl6x_3840x2160.png" />
+    </ItemGroup>
 
 </Project>

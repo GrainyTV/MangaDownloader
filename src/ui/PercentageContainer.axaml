@@ -1,0 +1,28 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Class="MangaDownloader.PercentageContainer">
+
+    <UserControl.Template>
+        <ControlTemplate>
+            <Grid Name="PercentageGrid">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+
+                <ContentPresenter Grid.Column="1" Grid.Row="1" Content="{TemplateBinding Content}" />
+
+            </Grid>
+        </ControlTemplate>
+    </UserControl.Template>
+
+</UserControl>

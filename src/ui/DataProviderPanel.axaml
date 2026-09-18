@@ -1,0 +1,47 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MangaDownloader"
+    x:Class="MangaDownloader.DataProviderPanel"
+    x:Name="root">
+
+    <UserControl.Template>
+        <ControlTemplate>
+
+            <Border IsVisible="{TemplateBinding IsVisible}" CornerRadius="16" Background="Violet">
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="3*" />
+                        <RowDefinition Height="2*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <local:FancyButton Grid.Row="0"
+                        Width="24"
+                        Height="24"
+                        CornerRadius="4"
+                        Label="X"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Command="{Binding #root.OnCloseDataProviderPanel}" />
+
+                    <TextBlock Grid.Row="1" Text="{TemplateBinding Title}" />
+
+                    <ContentPresenter Grid.Row="2" Content="{TemplateBinding Content}" />
+
+                    <TextBlock Grid.Row="3" Text="feedback" />
+
+                    <Button Grid.Row="4" Command="{TemplateBinding Command}">
+                        <TextBlock Text="{TemplateBinding ProceedButtonLabel}" />
+                    </Button>
+
+                </Grid>
+            </Border>
+
+        </ControlTemplate>
+    </UserControl.Template>
+
+</UserControl>

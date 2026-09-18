@@ -141,7 +141,7 @@ type StackLayout() =
                     if validation.IsSome then
                         let lowerBound = fst validation.Value
                         let upperBound = snd validation.Value
-                        request <- { request with ChapterRange = Some({ lowerBound .. upperBound }) }
+                        request <- { request with ChapterRange = Some(seq { lowerBound .. upperBound }) }
                         allowProceed.Trigger()
 
                     else

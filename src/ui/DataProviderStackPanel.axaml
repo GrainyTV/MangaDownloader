@@ -1,0 +1,43 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:MangaDownloader"
+    x:Class="MangaDownloader.DataProviderStackPanel"
+    x:DataType="local:DataProviderStackPanelViewModel">
+
+    <UserControl.Panels>
+        <!-- 0 -->
+        <local:DataProviderPanel Title="Title" ProceedButtonLabel="Next" Command="{Binding TitleNext}">
+            <StackPanel>
+                <TextBox Text="{Binding TitleText}" />
+                <CheckBox>
+                    <TextBlock Text="Use site provided" />
+                </CheckBox>
+            </StackPanel>
+        </local:DataProviderPanel>
+
+        <!-- 1 -->
+        <local:DataProviderPanel Title="Mode" ProceedButtonLabel="Next" Command="{Binding ModeNext}">
+            <StackPanel>
+                <RadioButton GroupName="OpMode" Content="Single Chapter" IsChecked="true" />
+                <RadioButton GroupName="OpMode" Content="Multiple Chapters" />
+            </StackPanel>
+        </local:DataProviderPanel>
+
+        <!-- 2 -->
+        <local:DataProviderPanel Title="Url" ProceedButtonLabel="Start">
+            <TextBox Text="{Binding UrlText}" />
+        </local:DataProviderPanel>
+
+        <!-- 3 -->
+        <local:DataProviderPanel Title="In Progress" ProceedButtonLabel="Next">
+        </local:DataProviderPanel>
+    </UserControl.Panels>
+
+    <UserControl.Template>
+        <ControlTemplate>
+            <ContentPresenter Content="{TemplateBinding ActivePanel}" />
+        </ControlTemplate>
+    </UserControl.Template>
+
+</UserControl>

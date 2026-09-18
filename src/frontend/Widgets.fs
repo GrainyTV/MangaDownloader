@@ -105,7 +105,7 @@ type PercentageContainer(child: Control, widthPercentage: string, heightPercenta
 
     let parsePercentage (valueStr: string) : double =
         Debug.Assert(valueStr.EndsWith '%', "PercentageContainer parameters must end with a '%' character.")
-        
+
         let mutable value = 0.0
         let parseSuccess = Double.TryParse(valueStr.TrimEnd '%', &value)
 
@@ -218,8 +218,8 @@ type TextInputField(desc: String * String) =
 
 type DoubleTextInputField(desc: String * String) =
     let baseControl = UniformGrid(Rows = 1, Columns = 2)
-    let textInputLower = TextBox(Watermark = "From:")
-    let textInputUpper = TextBox(Watermark = "To:")
+    let textInputLower = TextBox(PlaceholderText="From:")
+    let textInputUpper = TextBox(PlaceholderText="To:")
 
     let timerLower = new Timers.Timer(TimeSpan.FromSeconds 0.3, AutoReset = false)
     let timerUpper = new Timers.Timer(TimeSpan.FromSeconds 0.3, AutoReset = false)
